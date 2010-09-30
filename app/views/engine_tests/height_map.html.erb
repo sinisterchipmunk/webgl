@@ -1,0 +1,31 @@
+<script>
+  <%content_for :global do%>
+    var height_map;
+  <%end%>
+  
+  <%content_for :init do%>
+    height_map = new HeightMap(gl, document.getElementById('heightmap'));
+    height_map.magnitude = 5;
+    height_map.rebuild();
+  <%end%>
+  
+  <%content_for :render do%>
+    multMatrix(makeLookAt(25,70,60,  25,0,35,  0,0,-1));
+    setMatrixUniforms();
+                
+    height_map.render(WIREFRAME);
+  <%end%>
+  
+  <%content_for :canvas_clicked do%>
+    var img = new Image();
+    img.onload = function() {
+      document.getElementById('heightmap').src = img.src;
+      height_map.rebuild(img, {scale:0.75});
+    };
+    img.src = '/images/colloquy.png';
+  <%end%>
+</script>
+
+<br/>
+Height Map:
+<img id="heightmap" src="http://localhost/~colin/rails-game/images/rails.png" alt="" />

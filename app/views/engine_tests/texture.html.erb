@@ -1,0 +1,33 @@
+<script><%content_for :global do%>
+  var quad = new Quad(1, 1);
+
+  function handleTextureLoaded(image, texture) {
+    try {
+      gl.bindTexture(gl.TEXTURE_2D, texture);  
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
+      gl.generateMipmap(gl.TEXTURE_2D);  
+      gl.bindTexture(gl.TEXTURE_2D, null);
+        
+      quad.texture = texture;
+    } catch(e) { alert(e+"\n\n"+e.stack); }
+  }
+<%end%>
+
+<%content_for :init do%>
+  var grass = gl.createTexture();  
+  var img = new Image();  
+  img.onload = function() {
+    // 1 second timeout so that we can test that quad renders without a texture.
+    setTimeout(function() { handleTextureLoaded(img, grass); }, 1000);
+  };
+  img.src = "http://localhost/images/textures/poormansgrass.png";  
+<%end%>
+
+<%content_for :render do%>
+  mvTranslate(0, 0, -5);
+  setMatrixUniforms();
+
+  quad.render();
+<%end%></script>

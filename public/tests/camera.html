@@ -1,0 +1,192 @@
+<html>
+
+<head>
+  <title>Camera Test</title>
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester-ext.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/gl-utils.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/webgl.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/engine/vector.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/engine/camera.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/tests/test_helper.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/tests/engine/camera.js"></script>
+      
+  <script id="shader-fs" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+  
+    varying vec4 vColor;
+  
+    void main(void) {
+      gl_FragColor = vColor;
+    }
+  </script>
+  
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+  
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+  
+    varying vec4 vColor;
+  
+    void main(void) {
+      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+      vColor = aVertexColor;
+    }
+  </script>
+  
+  
+  <script type="text/javascript">
+    var frame_count = 0;
+    var shaderProgram;
+    var colorBuffer, vertexBuffer;
+    var camera = new Camera();
+    var vertices = [ 0,  1, 0,
+                    -1, -1, 0,
+                     1, -1, 0 ];
+    var colors = [ 1, 0, 0, 1,
+                   0, 1, 0, 1,
+                   0, 0, 1, 1 ];
+    
+    function initShaders() {
+      var fragmentShader = getShader(gl, "shader-fs");
+      var vertexShader = getShader(gl, "shader-vs");
+  
+      shaderProgram = gl.createProgram();
+      gl.attachShader(shaderProgram, vertexShader);
+      gl.attachShader(shaderProgram, fragmentShader);
+      gl.linkProgram(shaderProgram);
+  
+      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Could not initialise shaders");
+      }
+  
+      gl.useProgram(shaderProgram);
+  
+      shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+      gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+      
+      shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+      gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+  
+      shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+      shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+  
+  
+    var rotation = [0,0,0], translation = [0,0,0];
+    function drawScene() {
+      frame_count += 1;
+      //rotation += 1.0 * 0.015;
+      
+      gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      
+      perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+      loadIdentity();
+  
+      try {
+        camera.look(gl);
+        
+        var pos = camera.getPosition(), view = camera.getView(), up = camera.getUp(), right = camera.getRight();
+        var debug = document.getElementById('debug');
+        debug.innerHTML = "Position: "+pos.toSource()+"<br/>" +
+                          "View: "+view.toSource()+"<br/>" +
+                          "Up: "+up.toSource()+"<br/>" +
+                          "Right: "+right.toSource()+"<br/>" +
+                          "Magnitude: "+pos.magnitude();
+      } catch(e) { alert(e+"\n\n"+e.stack); }
+
+      mvTranslate(0, 0, -7);
+      setMatrixUniforms();
+      
+      drawTri();
+    }
+    
+    function drawTri()
+    {
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems);
+    }
+  
+    function webGLStart() {
+      var canvas = document.getElementById("lesson01-canvas");
+      initGL(canvas);
+      initShaders();
+
+      /* set up the triangle, which will provide a centerpiece for our scene */
+      vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+      vertexBuffer.itemSize = 3;
+      vertexBuffer.numItems = vertices.length/3;
+      
+      colorBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+      colorBuffer.itemSize = 4;
+      colorBuffer.numItems = colors.length / 4;
+      
+      for (var i = 0; i < after_initialize.length; i++) after_initialize[i](gl);
+  
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clearDepth(1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      
+      setInterval(drawScene, 15);
+      setInterval(calcFramerate, 1000);
+      setInterval(updateKeyboardInput, 15);
+    }
+    
+    function updateKeyboardInput()
+    {
+      var rotation = [0,0,0];
+      var translation = [0,0,0];
+      var movement_speed = 1.5; // in GL units per second
+      var rotation_speed = 0.5;
+      var strafing_speed = 1.0;
+      
+      movement_speed *= 0.15; // because that's the delay between frames (via setInterval, above)
+      rotation_speed *= 0.15; // in an offline app we'd calculate time elapsed between frames.
+      strafing_speed *= 0.15;
+      
+      if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
+      if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
+      if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
+      if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[87]) translation[2] += 1; // W
+      if (currentlyPressedKeys[83]) translation[2] -= 1; // S
+      if (currentlyPressedKeys[65]) translation[0] -= 1; // A
+      if (currentlyPressedKeys[68]) translation[0] += 1; // D
+      
+      if (translation[2] != 0) camera.move(translation[2]*movement_speed);
+      if (translation[0] != 0) camera.strafe(translation[0]*strafing_speed);
+      if (rotation.magnitude() > 0) camera.rotateView(rotation);
+    }
+    
+    function calcFramerate() {
+      document.getElementById('framerate').innerHTML = "FPS: "+frame_count;
+      frame_count = 0;
+    }
+  </script>
+</head>
+
+<body onload="webGLStart();">
+  <div id="framerate">Calculating...</div>
+  <canvas id="lesson01-canvas" style="border: none; float:left;" width="800" height="500"></canvas>
+  <div id="debug">
+    
+  </div>
+</body>
+
+</html>
+

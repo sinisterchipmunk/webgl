@@ -1,0 +1,91 @@
+<%content_for :head do%>
+  <style>#canvas { float:left; }</style>
+<%end%>
+
+<script>
+<%content_for :global do%>
+  var colorBuffer, vertexBuffer;
+  var camera = new Camera();
+  var vertices = [ 0,  1, 0,
+                  -1, -1, 0,
+                   1, -1, 0 ];
+  var colors = [ 1, 0, 0, 1,
+                 0, 1, 0, 1,
+                 0, 0, 1, 1 ];
+  var rotation = [0,0,0], translation = [0,0,0];
+
+  function drawTri()
+  {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(shaders['color_with_texture'].vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.vertexAttribPointer(shaders['color_with_texture'].vertexColorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems);
+  }
+
+  function updateKeyboardInput()
+  {
+    var rotation = [0,0,0];
+    var translation = [0,0,0];
+    var movement_speed = 1.5; // in GL units per second
+    var rotation_speed = 0.5;
+    var strafing_speed = 1.0;
+    
+    movement_speed *= 0.15; // because that's the delay between frames (via setInterval, above)
+    rotation_speed *= 0.075; // in an offline app we'd calculate time elapsed between frames.
+    strafing_speed *= 0.15;
+    
+    if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
+    if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
+    if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
+    if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
+    if (currentlyPressedKeys[87]) translation[2] += 1; // W
+    if (currentlyPressedKeys[83]) translation[2] -= 1; // S
+    if (currentlyPressedKeys[65]) translation[0] -= 1; // A
+    if (currentlyPressedKeys[68]) translation[0] += 1; // D
+    
+    if (translation[2] != 0) camera.move(translation[2]*movement_speed);
+    if (translation[0] != 0) camera.strafe(translation[0]*strafing_speed);
+    if (rotation.magnitude() > 0) camera.rotateView(rotation);
+  }
+<%end%>
+
+<%content_for :init do%>
+  /* set up the triangle, which will provide a centerpiece for our scene */
+  vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  vertexBuffer.itemSize = 3;
+  vertexBuffer.numItems = vertices.length/3;
+        
+  colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  colorBuffer.itemSize = 4;
+  colorBuffer.numItems = colors.length / 4;
+        
+  setInterval(updateKeyboardInput, 15);
+<%end%>
+
+<%content_for :render do%>
+  try {
+    camera.look(gl);
+          
+    var pos = camera.getPosition(), view = camera.getView(), up = camera.getUp(), right = camera.getRight();
+    var debug = document.getElementById('debug');
+    debug.innerHTML = "Position: "+pos.toSource()+"<br/>" +
+                      "View: "+view.toSource()+"<br/>" +
+                      "Up: "+up.toSource()+"<br/>" +
+                      "Right: "+right.toSource()+"<br/>" +
+                      "Magnitude: "+pos.magnitude();
+  } catch(e) { alert(e+"\n\n"+e.stack); }
+  
+  mvTranslate(0, 0, -7);
+  setMatrixUniforms();
+        
+  drawTri();
+<%end%>
+</script>
+
+<div id="debug">
+</div>

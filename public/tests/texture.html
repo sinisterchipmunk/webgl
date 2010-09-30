@@ -1,0 +1,160 @@
+<html>
+
+<head>
+  <title>Texture Test</title>
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester-ext.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/gl-utils.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/webgl.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/engine/assertions.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/objects/quad.js"></script>
+      
+  <script id="shader-fs" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+  
+    varying vec2 vTextureCoord;
+    varying vec4 vColor;
+    uniform sampler2D textures[32];
+  
+    void main(void) {
+      gl_FragColor = vColor * texture2D(textures[0], vec2(vTextureCoord.s, vTextureCoord.t));
+    }
+  </script>
+  
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+    attribute vec2 aTextureCoord;
+  
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+  
+    varying vec4 vColor;
+    varying vec2 vTextureCoord;
+  
+    void main(void) {
+      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+      vColor = aVertexColor;
+      vTextureCoord = aTextureCoord;
+    }
+  </script>
+  
+  
+  <script type="text/javascript">
+    var colorBuffer, vertexBuffer;
+    var frame_count = 0;
+    var shaderProgram;
+    var quad = new Quad(1, 1);
+    
+    function initShaders() {
+      var fragmentShader = getShader(gl, "shader-fs");
+      var vertexShader = getShader(gl, "shader-vs");
+  
+      shaderProgram = gl.createProgram();
+      gl.attachShader(shaderProgram, vertexShader);
+      gl.attachShader(shaderProgram, fragmentShader);
+      gl.linkProgram(shaderProgram);
+  
+      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Could not initialise shaders");
+      }
+  
+      gl.useProgram(shaderProgram);
+  
+      shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+      gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+      
+      shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+      gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+      
+      shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+      gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+  
+      shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+      shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+      shaderProgram.samplers = [];
+      for (var i = 0; i < 32; i++) shaderProgram.samplers[i] = gl.getUniformLocation(shaderProgram, "textures["+i+"]");
+    }
+  
+  
+    var rotation = [0,0,0], translation = [0,0,0];
+    function drawScene() {
+      if (drawScene.blocking) return;
+      frame_count += 1;
+      //rotation += 1.0 * 0.015;
+      
+      gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      
+      perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+      loadIdentity();
+      mvTranslate(0, 0, -5);
+      setMatrixUniforms();
+
+      quad.render();
+      checkGLError();
+    }
+       
+    function webGLStart() {
+      var canvas = document.getElementById("lesson01-canvas");
+      initGL(canvas);
+      initShaders();
+      initTextures();
+      checkGLError();
+
+      initializationComplete();
+      checkGLError();
+  
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clearDepth(1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      
+      setInterval(drawScene, 15);
+      setInterval(calcFramerate, 1000);
+    }
+    
+    function initTextures() {
+      drawScene.blocking = true;
+      //gl.enable(gl.TEXTURE_2D);  
+      var grass = gl.createTexture();  
+      var img = new Image();  
+      img.onload = function() { handleTextureLoaded(img, grass); drawScene.blocking = false; };
+      //img.src = "http://learningwebgl.com/lessons/lesson05/nehe.gif";
+      img.src = "http://localhost/~colin/rails-game/images/textures/poormansgrass.png";  
+    }  
+      
+    function handleTextureLoaded(image, texture) {
+      try {
+        gl.bindTexture(gl.TEXTURE_2D, texture);  
+        //gl.texImage2D(gl.TEXTURE_2D, 0, image, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
+        gl.generateMipmap(gl.TEXTURE_2D);  
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        
+        quad.texture = texture;
+      } catch(e) { alert(e+"\n\n"+e.stack); }
+    }
+    
+    function calcFramerate() {
+      document.getElementById('framerate').innerHTML = "FPS: "+frame_count;
+      frame_count = 0;
+    }
+  </script>
+</head>
+
+<body onload="webGLStart();">
+  <div id="framerate">Calculating...</div>
+  <canvas id="lesson01-canvas" style="border: none; float:left;" width="800" height="500"></canvas>
+  <div id="debug">
+  </div>
+</body>
+
+</html>
+

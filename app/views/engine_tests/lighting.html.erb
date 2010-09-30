@@ -1,0 +1,99 @@
+<script>
+<%content_for :global do%>
+  var camera = new Camera();
+  var shader = new Shader();
+  var sphere = new Sphere(1);
+  var rotation = [0,0];
+<%end%>
+
+<%content_for :init do%>
+  camera.translateTo(0,0,5);
+  shader.vertex.source   = <%=shaders['lighting_without_texture'].vertex_source.to_json.html_safe%>;
+  shader.fragment.source = <%=shaders['lighting_without_texture'].fragment_source.to_json.html_safe%>;
+  sphere.shader = shader;
+  drawScene.blocking = true;
+  var img = new Image();
+  img.onload = function() {
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);  
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
+    gl.generateMipmap(gl.TEXTURE_2D);  
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    
+    sphere.texture = texture;
+    drawScene.blocking = false;
+  };
+  img.src = "http://localhost/~colin/rails-game/images/textures/poormansgrass.png";
+
+  var direction = [-1,-1,-1];
+  var dircolor = [.8,.8,.8];
+  var ambient = [0.4,0.4,0.4];
+
+  shader.uniform('uAmbientColor', 'uniform3fv').value = function() {
+    var ndir = [parseFloat($('ambient-r').value),
+                parseFloat($('ambient-g').value),
+                parseFloat($('ambient-b').value)];
+    if (!isNaN(ndir[0]) && !isNaN(ndir[1]) && !isNaN(ndir[2])) ambient = ndir;
+    return new Float32Array(ambient);
+  };
+
+  shader.uniform('uLightingDirection', 'uniform3fv').value = function() {
+    var ndir = [parseFloat($('lighting-direction-x').value),
+                parseFloat($('lighting-direction-y').value),
+                parseFloat($('lighting-direction-z').value)];
+    if (!isNaN(ndir[0]) && !isNaN(ndir[1]) && !isNaN(ndir[2])) direction = ndir;
+    return new Float32Array(direction.normalize().times(-1));
+  };
+
+  shader.uniform('uDirectionalColor', 'uniform3fv').value = function() {
+    var ndir = [parseFloat($('lighting-direction-r').value),
+                parseFloat($('lighting-direction-g').value),
+                parseFloat($('lighting-direction-b').value)];
+    if (!isNaN(ndir[0]) && !isNaN(ndir[1]) && !isNaN(ndir[2])) dircolor = ndir;
+    return new Float32Array(dircolor);
+  };
+
+  shader.uniform('uUseLighting', 'uniform1i').value = function() {
+    return $("lighting-enabled").checked;
+  };
+<%end%>
+
+<%content_for :mouse_dragged do%>
+  if (mouse.diffy || mouse.diffx)
+    sphere.orientation.rotateView(-mouse.diffy / 10, mouse.diffx / 10, 0);
+<%end%>
+
+<%content_for :render do%>
+  camera.look(gl);
+  sphere.orientation.rotateView(rotation[0], rotation[1], 0);
+  sphere.render();
+<%end%>
+</script>
+
+<%content_for :head do%>
+  <style>#canvas { float: left; }</style>
+<%end%>
+
+<div>
+  <p>
+  Lighting enabled:
+  <input id="lighting-enabled" value="1" checked type="checkbox" />
+  </p><p>
+  Light direction:
+  x: <input id="lighting-direction-x" value="-1" size="5" type="text" />
+  y: <input id="lighting-direction-y" value="-1" size="5" type="text" />
+  z: <input id="lighting-direction-z" value="-1" size="5" type="text" />
+  </p><p>
+  Direction light color:
+  r: <input id="lighting-direction-r" value="0.8" size="5" type="text" />
+  g: <input id="lighting-direction-g" value="0.8" size="5" type="text" />
+  b: <input id="lighting-direction-b" value="0.8" size="5" type="text" />
+  </p><p>
+  Ambient light color:
+  r: <input id="ambient-r" value="0.4" size="5" type="text" />
+  g: <input id="ambient-g" value="0.4" size="5" type="text" />
+  b: <input id="ambient-b" value="0.4" size="5" type="text" />
+  </p>
+</div>

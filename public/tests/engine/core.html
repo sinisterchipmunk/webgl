@@ -1,0 +1,144 @@
+<html>
+
+<head>
+  <title>Learning WebGL &mdash; lesson 1</title>
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/sylvester-ext.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/webgl.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/engine/core.js"></script>
+  <script type="text/javascript" src="http://localhost/~colin/rails-game/javascripts/tests/engine/core.js"></script>
+
+  <script id="shader-fs" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+  
+    varying vec4 vColor;
+  
+    void main(void) {
+      gl_FragColor = vColor;
+    }
+  </script>
+  
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+  
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+  
+    varying vec4 vColor;
+  
+    void main(void) {
+      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+      vColor = aVertexColor;
+    }
+  </script>
+  
+  
+  <script type="text/javascript">
+    var colorBuffer, vertexBuffer;
+    var frame_count = 0;
+    var shaderProgram;
+    var vertices = [ 0,  1, 0,
+                    -1, -1, 0,
+                     1, -1, 0 ];
+    var colors = [ 1, 0, 0, 1,
+                   0, 1, 0, 1,
+                   0, 0, 1, 1 ];
+    
+    function initShaders() {
+      var fragmentShader = getShader(gl, "shader-fs");
+      var vertexShader = getShader(gl, "shader-vs");
+  
+      shaderProgram = gl.createProgram();
+      gl.attachShader(shaderProgram, vertexShader);
+      gl.attachShader(shaderProgram, fragmentShader);
+      gl.linkProgram(shaderProgram);
+  
+      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Could not initialise shaders");
+      }
+  
+      gl.useProgram(shaderProgram);
+  
+      shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+      gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+      
+      shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+      gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+  
+      shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+      shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+  
+  
+    var rotation = 0;
+    function drawScene() {
+      frame_count += 1;
+      rotation += 1.0;
+      
+      gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      
+      perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+      loadIdentity();
+  
+//      multMatrix(makeLookAt(0, 55, 50,  0, 0, 10,  0, 0, -1));
+      mvTranslate(0, 0, -7);
+      setMatrixUniforms();
+      
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems);
+      
+      mvPopMatrix();
+    }
+  
+    function webGLStart() {
+      var canvas = document.getElementById("lesson01-canvas");
+      initGL(canvas);
+      initShaders();
+
+      /* set up the triangle, which will provide a centerpiece for our scene */
+      vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+      vertexBuffer.itemSize = 3;
+      vertexBuffer.numItems = vertices.length/3;
+      
+      colorBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+      colorBuffer.itemSize = 4;
+      colorBuffer.numItems = colors.length / 4;
+      
+      for (var i = 0; i < after_initialize.length; i++) after_initialize[i](gl);
+  
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clearDepth(1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      
+      setInterval(drawScene, 60);
+      setInterval(calcFramerate, 1000);
+    }
+    
+    function calcFramerate() {
+      document.getElementById('framerate').innerHTML = "FPS: "+frame_count;
+      frame_count = 0;
+    }
+  </script>
+</head>
+
+<body onload="webGLStart();">
+  <div id="framerate">Calculating...</div>
+  <canvas id="lesson01-canvas" style="border: none;" width="800" height="500" onclick="var img = new Image(); img.onload = function() { document.getElementById('heightmap').src = img.src; height_map.rebuild(img, {scale:0.75}); }; img.src = 'http://localhost/~colin/rails-game/images/colloquy.png';"></canvas>
+</body>
+
+</html>
+

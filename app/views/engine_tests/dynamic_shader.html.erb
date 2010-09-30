@@ -1,0 +1,50 @@
+<%content_for :head do%>
+  <style>#canvas { float: left; }</style>
+<%end%>
+
+<script>
+<%content_for :global do%>
+  var shader = new Shader();
+  var quad = new Quad(1,1);
+
+  shader.fragment.source = "#ifdef GL_ES\n" +
+                           "precision highp float;\n" +
+                           "#endif\n" +
+                             
+                           "void main(void) {\n" +
+                           "  gl_FragColor = vec4(0,0,1,1);\n" +
+                           "}";
+  shader.vertex.source = "attribute vec3 aVertexPosition;\n" +
+                            
+                         "uniform mat4 uMVMatrix;\n" +
+                         "uniform mat4 uPMatrix;\n" +
+                            
+                         "void main(void) {\n" +
+                         "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\n" +
+                         "}";
+
+
+  shader.uniforms('uMVMatrix', 'uniformMatrix4fv').value = function() { return new Float32Array(mvMatrix.flatten()); };
+  shader.uniforms('uPMatrix',  'uniformMatrix4fv').value = function() { return new Float32Array(pMatrix.flatten());  };
+//  shader.addUniform('uMVMatrix');
+//  shader.addUniform('uPMatrix');
+//
+//  shader.setUMVMatrix('uniformMatrix4fv', function() { return new Float32Array(mvMatrix.flatten()); });
+//  shader.setUPMatrix( 'uniformMatrix4fv', function() { return new Float32Array(pMatrix.flatten());  });
+<%end%>
+
+<%content_for :init do%>
+  // we COULD do this, but the shader should compile itself as needed when its program is used, as well.
+  //  shader.compile();
+<%end%>
+
+<%content_for :render do%>
+  mvTranslate(0,0,-5);
+
+  quad.shader = shader;
+  quad.render();
+<%end%>
+</script>
+
+This test demonstrates that shaders can be defined and compiled dynamically using the Shader() function. If the shader
+is working, then there will be a blue square in the center of the screen.

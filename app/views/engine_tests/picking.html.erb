@@ -1,0 +1,84 @@
+<%content_for :head do%>
+  <style>#canvas { float:left; }</style>
+<%end%>
+
+<script>
+<%content_for :global do%>
+  var quad = new Quad(1,1);
+  var sphere = new Sphere(1);
+  var world = new World();
+  var mouse = {overCanvas:false,x:0,y:0};
+  var selectedObject = null;
+  var highlightShader = new Shader();
+
+var rot = 0;
+  
+  function update_debug()
+  {
+    $("debug").update("Mouse over canvas: "+mouse.overCanvas+"<br/>"+
+                      "Mouse X: "+mouse.x+"<br/>"+
+                      "Mouse Y: "+mouse.y+"<br/>"+
+                      "Selected object: "+(selectedObject ? selectedObject.object_id : "(none)"));
+  }
+<%end%>
+
+<%content_for :init do%>
+  highlightShader.fragment.source = "#ifdef GL_ES\n" +
+                                    "precision highp float;\n" +
+                                    "#endif\n" +
+                                      "varying vec4 intensity;\n" +
+                                       
+                                    "void main(void) {\n" +
+                                    "  gl_FragColor = vec4(1,1,1,1);\n" +
+                                    "}";
+
+  highlightShader.vertex.source   = "attribute vec3 aVertexPosition;\n" +
+                                         
+                                    "uniform mat4 mvMatrix;\n" +
+                                    "uniform mat4 pMatrix;\n" +
+                                        
+                                    "void main(void) {\n" +
+                                    "  gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);\n" +
+                                    "}";
+  
+  update_debug();
+  world.camera.move(-5);
+  world.addObject(quad);
+  world.addObject(sphere);
+  quad.setColor([0.5,0.5,0.5,1]);
+  sphere.setColor([0.5,0.5,0.5,1]);
+  sphere.orientation.translateTo(3, 0, 0);
+<%end%>
+
+<%content_for :render do%>
+  if (selectedObject) selectedObject.shader = null;
+  selectedObject = world.pick(mouse.x, mouse.y);
+  if (selectedObject) selectedObject.shader = highlightShader;
+  update_debug();
+
+  rot += 0.015;
+  var x = Math.cos(rot) * 5;
+  var z = Math.sin(rot) * 5;
+
+  world.camera.translateTo(x, 0, z);
+  world.camera.lookAt(0,0,0);
+  world.render();
+<%end%>
+
+<%content_for :mouse_moved do%>
+  update_debug();
+
+<%end%>
+
+<%content_for :mouse_over do%>
+  mouse.overCanvas = true;
+  update_debug();
+<%end%>
+
+<%content_for :mouse_out do%>
+  mouse.overCanvas = false;
+  update_debug();
+<%end%>
+</script>
+
+<div id="debug"></div>
