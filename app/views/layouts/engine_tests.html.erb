@@ -11,7 +11,7 @@
   <script type="text/javascript" src="/javascripts/sylvester-ext.js"></script>
   <script type="text/javascript" src="/javascripts/gl-utils.js"></script>
   <script type="text/javascript" src="/javascripts/webgl.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/assertions.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/core.js"></script>
   <%dependencies.each do |fi| %>
     <%=javascript_include_tag fi%>
   <%end%>
@@ -94,6 +94,9 @@
     }
   
     function webGLStart() {
+      logger.level = Logger.ERROR;
+      if ($('logger')) $('logger').update(logger);
+      
       var canvas = document.getElementById("canvas");
       
       canvas.onclick = canvas_clicked;
@@ -182,7 +185,10 @@
   </script>
 </head>
   <body onload="webGLStart();">
-    <div id="framerate">Calculating...</div>
+    <div id="framerate" style="float:left;width:100px;">Calculating...</div>
+    <div style="clear:right;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+    <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
+    </div>
     <canvas id="canvas" style="border: none;" width="800" height="500"></canvas>
     <%=yield%>
   </body>

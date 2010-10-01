@@ -6,39 +6,37 @@ class EngineTestsController < ApplicationController
   end
 
   def height_map
-    dependencies << "engine/core" << 'engine/heightmap' << 'tests/engine/heightmap'
+    dependencies << 'engine/heightmap' << 'tests/engine/heightmap'
   end
 
   def texture
-    dependencies << "engine/core" << 'objects/quad'
+    dependencies << 'objects/quad'
   end
 
   def camera
-    dependencies << 'engine/vector' << 'engine/core' << 'engine/camera' << 'tests/engine/camera'
+    dependencies << 'tests/engine/camera'
   end
   
   def interface
-    dependencies << "engine/core" << 'engine/vector' << 'engine/heightmap' << 'engine/camera'
+    dependencies << 'engine/heightmap'
   end
   
   def picking
-    dependencies << 'engine/core' << 'engine/world' << 'tests/engine/world' << 'engine/camera' << 'engine/vector'
-    dependencies << 'objects/quad' << "engine/shader" << "objects/sphere"
+    dependencies << 'tests/engine/world' << 'objects/quad' << "engine/shader" << "objects/sphere"
   end
   
   def dynamic_shader
-    dependencies << "engine/vector" << "engine/core" << "objects/quad" << "engine/shader" << "tests/engine/shader"
+    dependencies << "objects/quad" << "tests/engine/shader"
   end
 
   def core
-    dependencies << "engine/core" << "tests/engine/core" << "engine/vector" << "engine/assertions"
+    dependencies << "tests/engine/core"
   end
   
   def lighting
-    dependencies << 'engine/core' << 'engine/world' << 'tests/engine/world' << 'engine/camera' << 'engine/vector'
-    dependencies << 'objects/quad' << "engine/shader" << "objects/sphere" << "engine/lighting" << "tests/engine/lighting"
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world'
   end
-
+  
   private
   def dependencies
     @dependencies ||= []

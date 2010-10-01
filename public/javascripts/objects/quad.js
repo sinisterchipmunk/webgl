@@ -3,7 +3,8 @@ function Quad(width, height, gl)
   var self = this;
   self.object_id = ++Quad.identifier;
   
-  var vertexBuffer = null, textureBuffer = null, colorBuffer = null;
+  self.orientation = new Camera();
+  var vertexBuffer = null, textureBuffer = null, colorBuffer = null, normalBuffer = null;
   
   var vertices = [ -width/2, -height/2, 0,
                     width/2, -height/2, 0,
@@ -17,6 +18,10 @@ function Quad(width, height, gl)
                         1, 0,
                         0, 1,
                         1, 1 ];
+  var normals = [ 0, 0, -1,
+                  0, 0, -1,
+                  0, 0, -1, 
+                  0, 0, -1 ];
   var pickShader;
   
   /* private function for generating this object's pick shader. */
@@ -73,10 +78,16 @@ function Quad(width, height, gl)
     if (!gl) return;
     var shaderProgram;
     
+    mvPushMatrix();
+    multMatrix(self.orientation.getMatrix());
+
     var doRender = function() {
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
-      checkGLError();
+      if (shaderProgram && typeof(shaderProgram.vertexPositionAttribute) != "undefined")
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        checkGLError();
+      }
 
       if (mode == FILL || mode == RENDER_PICK)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
@@ -84,6 +95,7 @@ function Quad(width, height, gl)
         gl.drawArrays(gl.LINE_STRIP, 0, vertexBuffer.numItems);
 
       checkGLError();
+      mvPopMatrix();
     };
     
     if (mode == RENDER_PICK)
@@ -91,8 +103,9 @@ function Quad(width, height, gl)
       var shader = getPickShader();
       shader.setAttribute('aVertexPosition', vertexBuffer);
       shader.bind(function() {
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
-        checkGLError();
+        doRender();
+//        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
+//        checkGLError();
       });
       return;
 //      pushShader(shaderProgram, function() {
@@ -107,10 +120,20 @@ function Quad(width, height, gl)
     {
       if (this.shader)
       {
-        this.shader.setAttribute('aVertexPosition', vertexBuffer);
+        self.shader.setAttribute('aVertexPosition', vertexBuffer);
+        self.shader.setAttribute('aTextureCoord', textureBuffer);
+        self.shader.setAttribute('aVertexNormal', normalBuffer);
+        self.shader.setAttribute('aVertexColor', colorBuffer);
+        if (self.texture)
+        {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, this.texture);
+          self.shader.uniform('uSampler', 'uniform1i').value = 0;
+        }
         this.shader.bind(function() {
-          gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
-          checkGLError();
+          doRender();
+//          gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
+//          checkGLError();
         });
         return;
       }
@@ -146,6 +169,7 @@ function Quad(width, height, gl)
     self.gl.deleteBuffer(vertexBuffer);
     self.gl.deleteBuffer(colorBuffer);
     self.gl.deleteBuffer(textureBuffer);
+    self.gl.deleteBuffer(normalBuffer);
   };
   
   this.rebuild = function(gl) {
@@ -163,6 +187,12 @@ function Quad(width, height, gl)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
     colorBuffer.itemSize = 4;
     colorBuffer.numItems = 4;
+
+    normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    normalBuffer.itemSize = 3;
+    normalBuffer.numItems = 4;
     
     textureBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);

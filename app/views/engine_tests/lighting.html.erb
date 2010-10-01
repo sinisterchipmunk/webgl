@@ -3,15 +3,28 @@
   var camera = new Camera();
   var shader = new Shader();
   var sphere = new Sphere(1);
+  var sphere2 = new Sphere(1);
   var rotation = [0,0];
+  var quad = new Quad(1, 1);
 <%end%>
 
 <%content_for :init do%>
   camera.translateTo(0,0,5);
-  shader.vertex.source   = <%=shaders['lighting_without_texture'].vertex_source.to_json.html_safe%>;
-  shader.fragment.source = <%=shaders['lighting_without_texture'].fragment_source.to_json.html_safe%>;
+  camera.lookAt(0,0,0);
+
+  sphere.orientation.translateTo(1.5,0,0);
+  sphere2.orientation.translateTo(-1.5,0,3);
+  quad.orientation.translateTo(0,0,-2);
+
+  shader.vertex.source   = <%=shaders['per_fragment_lighting_with_texture'].vertex_source.to_json.html_safe%>;
+  shader.fragment.source = <%=shaders['per_fragment_lighting_with_texture'].fragment_source.to_json.html_safe%>;
+
   sphere.shader = shader;
+  sphere2.shader = shader;
+  //quad.shader = shader;
+  
   drawScene.blocking = true;
+
   var img = new Image();
   img.onload = function() {
     var texture = gl.createTexture();
@@ -23,6 +36,9 @@
     gl.bindTexture(gl.TEXTURE_2D, null);
     
     sphere.texture = texture;
+    sphere2.texture = texture;
+    quad.texture = texture;
+    
     drawScene.blocking = false;
   };
   img.src = "http://localhost/~colin/rails-game/images/textures/poormansgrass.png";
@@ -30,6 +46,8 @@
   var direction = [-1,-1,-1];
   var dircolor = [.8,.8,.8];
   var ambient = [0.4,0.4,0.4];
+  var pointLocation = [-2, 0, 0];
+  var pointColor = [1, 0, 0];
 
   shader.uniform('uAmbientColor', 'uniform3fv').value = function() {
     var ndir = [parseFloat($('ambient-r').value),
@@ -58,6 +76,23 @@
   shader.uniform('uUseLighting', 'uniform1i').value = function() {
     return $("lighting-enabled").checked;
   };
+
+  shader.uniform('uPointLightColor', 'uniform3fv').value = function() {
+    var ndir = [parseFloat($('point-r').value),
+                parseFloat($('point-g').value),
+                parseFloat($('point-b').value)];
+    if (!isNaN(ndir[0]) && !isNaN(ndir[1]) && !isNaN(ndir[2])) pointColor = ndir;
+    return new Float32Array(pointColor);
+  };
+  
+  shader.uniform('uPointLightLocation', 'uniform3fv').value = function() {
+    var ndir = [parseFloat($('point-x').value),
+                parseFloat($('point-y').value),
+                parseFloat($('point-z').value)];
+    if (!isNaN(ndir[0]) && !isNaN(ndir[1]) && !isNaN(ndir[2])) pointLocation = ndir;
+    return new Float32Array(pointLocation);
+  };
+  
 <%end%>
 
 <%content_for :mouse_dragged do%>
@@ -65,10 +100,28 @@
     sphere.orientation.rotateView(-mouse.diffy / 10, mouse.diffx / 10, 0);
 <%end%>
 
+<%content_for :mouse_moved do%>
+  if ($("point-mouse").checked)
+  {
+    // light is attached to mouse
+    var x = (mouse.x - ($('canvas').width  / 2)) / $('canvas').width;
+    var y = (mouse.y - ($('canvas').height / 2)) / $('canvas').height;
+    
+    var max_distance_x = 5;
+    var max_distance_y = 3.5;
+    
+    $("point-x").value =  x * max_distance_x;
+    $("point-y").value = -y * max_distance_y;
+  }
+<%end%>
+
 <%content_for :render do%>
   camera.look(gl);
+//  quad.orientation.lookAt(pointLocation);
+//  quad.render();
   sphere.orientation.rotateView(rotation[0], rotation[1], 0);
   sphere.render();
+  sphere2.render();
 <%end%>
 </script>
 
@@ -95,5 +148,16 @@
   r: <input id="ambient-r" value="0.4" size="5" type="text" />
   g: <input id="ambient-g" value="0.4" size="5" type="text" />
   b: <input id="ambient-b" value="0.4" size="5" type="text" />
+  </p><p>
+  Point light position:
+  x: <input id="point-x" value="-2" size="5" type="text" />
+  y: <input id="point-y" value="0" size="5" type="text" />
+  z: <input id="point-z" value="0" size="5" type="text" />
+  <input id="point-mouse" type="checkbox" /> (mouse)
+  </p><p>
+  Point light color:
+  r: <input id="point-r" value="1" size="5" type="text" />
+  g: <input id="point-g" value="0" size="5" type="text" />
+  b: <input id="point-b" value="0" size="5" type="text" />
   </p>
 </div>
