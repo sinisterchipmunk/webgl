@@ -1,0 +1,65 @@
+<script>
+  <%objects.each do |object|%>
+    //world.addObject(<%=object.to_js%>);
+  <%end%>
+  
+  <%content_for :global do%>
+    var world = new World();
+    var renderable = new Renderable(
+      function(vertices, colors, textureCoords, normals, indices) { // init
+        vertices.push( 0,  1, 0);
+        vertices.push(-1, -1, 0);
+        vertices.push( 1, -1, 0);
+        
+        textureCoords.push(0.5, 0);
+        textureCoords.push(0, 1);
+        textureCoords.push(1, 1);
+      },
+      function() { // update
+        
+      });
+  <%end%>
+          
+  <%content_for :init do%>
+    renderable.shader = shaders['color_without_texture'];
+    logger.level = Logger.DEBUG;
+    var img = new Image();
+    img.onload = function() {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);  
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
+      gl.generateMipmap(gl.TEXTURE_2D);  
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      renderable.texture = texture;
+      renderable.shader = shaders['color_with_texture'];
+    };
+    img.src = "http://localhost/images/textures/poormansgrass.png";  
+    
+    world.camera.translateTo(0,0,10);
+    
+  
+    //var sphere = new Sphere(1);
+    //sphere.orientation.translateTo(0,0,0);
+    //world.addObject(sphere);
+  
+//    sphere = new Sphere(0.5);
+//    sphere.orientation.translateTo(1.5,1.5,1.5);
+//    world.addObject(sphere);
+//  
+//    sphere = new Sphere(0.5);
+//    sphere.orientation.translateTo(1.5,-1.5,-1.5);
+//    world.addObject(sphere);
+  <%end%>
+          
+  <%content_for :render do%>
+    world.camera.look(gl);
+    renderable.render();
+    //useShader(shaders['test_red']);
+//    logger.debug(world.objects[0].toSource());
+//    world.camera.look(gl);
+//    world.objects[0].render();
+    world.render();
+  <%end%>
+</script>

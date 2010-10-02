@@ -19,14 +19,14 @@ function Logger()
   var buffer = "";
   
   self.level = Logger.INFO;
-  function update() { if ($('logger')) $('logger').update(toString()); }
+  function update() { if ($('logger')) $('logger').update(self.toString()); }
   
   function getLine() {
     var e = new Error();
     var line = e.stack.split("\n")[4];
     line = line.substring(line.lastIndexOf("/")+1, line.length);
     line = line.split(":");
-    while (line[0].length < 12) line[0] = " " + line[0];
+    while (line[0].length < 15) line[0] = " " + line[0];
     while (line[1].length < 4)  line[1] = line[1] + " ";
     
     return line.join(":");

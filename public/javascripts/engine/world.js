@@ -27,26 +27,6 @@ function World()
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.pickTexture, 0);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.renderPickBuffer);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    
-    
-    /*
-    self.framePickBuffer = gl.createFramebuffer();
-    self.renderPickBuffer = gl.createRenderbuffer();
-    self.pickTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, self.pickTexture);
-    
-    try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, null); }
-    catch(e) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, tex); }
-    
-    gl.bindFramebuffer(gl.FRAMEBUFFER, self.framePickBuffer);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, self.renderPickBuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT, 1, 1);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-    
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.pickTexture, 0);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.renderPickBuffer);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    */
   });
 }
 

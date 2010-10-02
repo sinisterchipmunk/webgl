@@ -16,56 +16,18 @@
     <%=javascript_include_tag fi%>
   <%end%>
   
-  <%shaders.values.each do |shader|%>
-    <script id="<%=shader.name%>-fs" type="x-shader/x-fragment">
-      <%=shader.fragment_source%>
-    </script>
-    <script id="<%=shader.name%>-vs" type="x-shader/x-vertex">
-      <%=shader.vertex_source%>
-    </script>
-  <%end%>
-  
   <script type="text/javascript">
     var frame_count = 0;
     
     <%=yield :global%>
     
     function initShaders() {
+      var shader;
       <%shaders.values.each do |shader|%>
-        var fragmentShader = getShader(gl, "<%=shader.name%>-fs");
-        var vertexShader = getShader(gl, "<%=shader.name%>-vs");
-    
-        var shaderProgram = shaders['<%=shader.name%>'] = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
-    
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-          alert("Could not initialise shader: <%=shader.name%>");
-        }
-    
-        gl.useProgram(shaderProgram);
-    
-        function storeAttrib(name, shaderName)
-        {
-          var result = gl.getAttribLocation(shaderProgram, shaderName);
-          if (result != -1)
-          {
-            shaderProgram.attributes = shaderProgram.attributes || [];
-            shaderProgram.attributes.push(name);
-            shaderProgram[name] = result;
-          }
-        }
-      
-        storeAttrib('vertexPositionAttribute', 'aVertexPosition');
-        storeAttrib('vertexColorAttribute', 'aVertexColor');
-        storeAttrib('textureCoordAttribute', 'aTextureCoord');
-      
-        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-        shaderProgram.samplers = [];
-        for (var i = 0; i < 32; i++) shaderProgram.samplers[i] = gl.getUniformLocation(shaderProgram, "textures["+i+"]");
-        checkGLError();
+        shader = new Shader();
+        shader.vertex.source   = <%=shader.vertex_source.to_json.html_safe%>;
+        shader.fragment.source = <%=shader.fragment_source.to_json.html_safe%>;
+        shaders[<%=shader.name.to_json.html_safe%>] = shader;    
       <%end%>
     }
   

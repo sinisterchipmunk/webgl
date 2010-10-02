@@ -12,11 +12,19 @@ Matrix.prototype.setLookAt = function(position, view, up, side) {
   return this.setTranslateTo(position);
 };
 
-Matrix.prototype.setTranslateTo = function(position) {
-  for (i = 0; i < 3; i++)
+Matrix.prototype.setTranslateBy = function(position) {
+  if (logger)
+    logger.warn("Warning: I'm not convinced the implementation of Matrix#setTranslateBy is accurate. Trust, but verify.");
+  for (var i = 0; i < 3; i++)
     this.elements[i][3] = -position[0] * this.elements[i][0] +
                           -position[1] * this.elements[i][1] +
                           -position[2] * this.elements[i][2];  
+};
+
+Matrix.prototype.setTranslateTo = function(position) {
+  this.elements[0][3] = -position[0];
+  this.elements[1][3] = -position[1];
+  this.elements[2][3] = -position[2];
   
   return this;
 };

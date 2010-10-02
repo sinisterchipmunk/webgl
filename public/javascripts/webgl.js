@@ -30,7 +30,9 @@ function checkGLError()
   {
     var str = "GL error: "+error;
     var err = new Error(str);
-    alert(err+"\n\n"+err.stack);
+    var stack = err.stack.split("\n");
+    stack.shift();
+    alert(err+"\n\n"+stack.join("\n"));
     throw err;
   }
 }
@@ -118,8 +120,10 @@ function setMatrixUniforms() {
 }
 
 function useShader(name) {
+  if (name.getCompiledProgram) name = name.getCompiledProgram();
   if ((name != activeShaderName && name != activeShader) || !activeShader)
   {
+    checkGLError();
     disableShaderAttribs();
     if (typeof(name) == "string")
     {
@@ -156,6 +160,7 @@ function disableShaderAttribs()
 }
 
 function mvPushMatrix(m) {
+  if (!mvMatrix) loadIdentity();
   if (m) {
     mvMatrixStack.push(m.dup());
     mvMatrix = m.dup();

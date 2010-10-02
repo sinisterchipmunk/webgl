@@ -169,15 +169,17 @@ Shader.prototype = {
   bind: function(func) {
     var self = this;
     
+    var program = self.getCompiledProgram();
+    
     if (func)
-      pushShader(self.getCompiledProgram(), function() {
+      pushShader(program, function() {
         self.applyUniforms();
         self.applyAttributes();
         func();
       });
     else
     {
-      useShader(self.getCompiledProgram());
+      useShader(program);
       self.applyUniforms();
       self.applyAttributes();
     }

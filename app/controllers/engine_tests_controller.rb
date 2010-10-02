@@ -1,5 +1,5 @@
 class EngineTestsController < ApplicationController
-  helper_method :dependencies, :shaders
+  helper_method :dependencies, :shaders, :objects
   before_filter :add_all_shaders
   
   def index
@@ -37,9 +37,22 @@ class EngineTestsController < ApplicationController
     dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world'
   end
   
+  def ruby_layer
+    objects << WebGL::Quad.new(1, 1)
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+  end
+  
+  def renderable
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+  end
+  
   private
   def dependencies
     @dependencies ||= []
+  end
+  
+  def objects
+    @objects ||= []
   end
   
   def shaders
