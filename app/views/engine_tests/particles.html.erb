@@ -1,0 +1,28 @@
+<script>
+  <%content_for :global do%>
+    var world = new World();
+    var particles;
+  <%end%>
+  
+  <%content_for :init do%>
+    particles = new ParticleGenerator();
+    world.addObject(particles);
+    world.camera.translateTo(0,0,14);
+  <%end%>
+  
+  <%content_for :render do%>
+    if (mouse && mouse.x && mouse.y)
+    {
+      var x = mouse.x / $('canvas').width;
+      var y = mouse.y / $('canvas').height;
+      x -= 0.5;
+      y -= 0.5;
+      x *= 10;
+      y *= 10;
+      
+      particles.options.destination[0] = x;
+      particles.options.destination[1] = -y;
+    }
+    world.render();
+  <%end%>
+</script>

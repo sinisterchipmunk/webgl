@@ -51,20 +51,6 @@ var Renderable = function() {
     var trans = Matrix.Translation($V(self.orientation.getPosition())).multiply(matr);
     
     mvMatrix = mvMatrix.x(trans);
-//    var tns = Matrix.I(4);
-//    for (var i = 0; i < 3; i++) tns.elements[3][i] = matr.elements[3][i] - mvMatrix.elements[3][i];
-////    multMatrix(tns);
-//    
-//    
-//    //var distance = 
-//            //[mvMatrix.elements[3][0], mvMatrix.elements[3][1], mvMatrix.elements[3][2]].minus(self.orientation.getPosition());
-//      
-//    // first apply rotation (have to zero out matr translation first)
-//    matr.elements[3][0] = matr.elements[3][1] = matr.elements[3][2] = 0;
-//    multMatrix(matr);
-//      
-//    // then apply translation
-//    //mvTranslate(distance[0], distance[1], distance[2]);
   }
   
   // class
@@ -160,7 +146,7 @@ var Renderable = function() {
         disposeBuffer(this, 'GLTextureCoordsBuffer');
         disposeBuffer(this, 'GLIndexBuffer');
         disposeBuffer(this, 'GLNormalBuffer');
-        if (this.pickShader)           this.pickShader.dispose();
+        if (this.pickShader) this.pickShader.dispose();
         this.vertices      = [];
         this.colors        = [];
         this.textureCoords = [];
@@ -241,8 +227,17 @@ var Renderable = function() {
         self.setGLNormalBuffer(buffer);
       }
       
+      var previousUpdate = new Date();
       if (self.updateInterval) clearInterval(self.updateInterval);
-      self.updateInterval = setInterval(function() { if (self.update) self.update(); }, Renderable.update_interval);
+      self.updateInterval = setInterval(function() {
+        if (self.update)
+        {
+          var currentTime = new Date();
+          var timechange = currentTime - previousUpdate;
+          previousUpdate = currentTime;
+          self.update(timechange / 1000);
+        }
+      }, Renderable.update_interval);
     }
   });
 }();

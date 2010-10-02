@@ -65,7 +65,7 @@
   
     function webGLStart() {
       logErrors("webGLStart", function() {
-        logger.level = Logger.ERROR;
+        logger.level = Logger.DEBUG;
         if ($('logger')) $('logger').update(logger);
         
         var canvas = document.getElementById("canvas");

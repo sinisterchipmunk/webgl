@@ -49,6 +49,8 @@ World.prototype = {
   },
   
   pick: function(x, y) {
+    var debug = $("debug");
+    
     // compensate for firefox; TODO see if this is necessary for chrome / safari
     x -= 2;
     y -= 3;
@@ -96,7 +98,7 @@ World.prototype = {
     }
     if(data.data) data=data.data;
     
-    $("debug").update($("debug").innerHTML+"<br/>"+
+    if (debug) debug.update(debug.innerHTML+"<br/>"+
                         "mask data: ["+data[0]+","+data[1]+","+data[2]+"]<br/>"+
                         "viewport size: "+gl.viewportWidth+"x"+gl.viewportHeight);
     var index = decodeFromColor(data);
@@ -111,7 +113,7 @@ World.prototype = {
     
     if (data[2] > 0) // check the 'blue' key
     {
-      $("debug").update($("debug").innerHTML+"<br/>Found object: "+this.objects[index]+" (index "+index+")");
+      if (debug) debug.update(debug.innerHTML+"<br/>Found object: "+this.objects[index]+" (index "+index+")");
       return this.objects[index];
     }
     return null;
