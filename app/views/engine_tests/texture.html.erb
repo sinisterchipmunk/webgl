@@ -24,7 +24,7 @@
     // 1 second timeout so that we can test that quad renders without a texture.
     setTimeout(function() { handleTextureLoaded(img, grass); }, 1000);
   };
-  img.src = "http://localhost/images/textures/poormansgrass.png";  
+  img.src = "/images/textures/poormansgrass.png";  
 
   quad.shader = shaders['color_without_texture'];
   camera.translateTo(0,0,5);

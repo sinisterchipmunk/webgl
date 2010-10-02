@@ -1,2 +1,9 @@
-<h1>EngineTests#index</h1>
-<p>Find me in app/views/engine_tests/index.html.erb</p>
+<%content_for :style do%>
+  #canvas { display: none; }
+<%end%>
+
+<ul>
+<%(controller.class.action_methods.sort - ['index']).each do |action|%>
+  <li><%=link_to action, :action => action%></li>
+<%end%>
+</ul>

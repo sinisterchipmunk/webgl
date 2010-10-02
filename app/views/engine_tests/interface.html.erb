@@ -8,7 +8,7 @@
     var grass = gl.createTexture();  
     var img = new Image();  
     img.onload = function() { handleTextureLoaded(img, grass); };  
-    img.src = "http://localhost/~colin/rails-game/images/textures/poormansgrass.png";  
+    img.src = "/images/textures/poormansgrass.png";  
   }  
       
   function handleTextureLoaded(image, texture) {
@@ -58,7 +58,7 @@
     initTextures();
     checkGLError();
   };
-  img.src = "http://localhost/~colin/rails-game/images/height.png";
+  img.src = "/images/height.png";
 
   camera.moveTo(35, 75, 42);
   camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();

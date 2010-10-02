@@ -35,6 +35,13 @@
       teapot.render();
     }
   <%end%>
+        
+  <%content_for :mouse_moved do%>
+    if (teapot && mouse && (mouse.diffx || mouse.diffy))
+    {
+      teapot.orientation.rotateView(mouse.diffy/10,-mouse.diffx/10);
+    }
+  <%end%>
 </script>
 
 <%content_for :head do%>

@@ -176,7 +176,8 @@
 </head>
   <body onload="webGLStart();">
     <div id="framerate" style="float:left;width:100px;">Calculating...</div>
-    <div style="clear:right;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+    <div style="float:left;width:100px;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+    <div style="clear:right;"><%=link_to "Back to Index", :action => 'index'%></div>
     <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
     </div>
     <canvas id="canvas" style="border: none;" width="800" height="500"></canvas>
