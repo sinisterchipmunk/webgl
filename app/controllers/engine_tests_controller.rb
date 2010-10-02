@@ -4,6 +4,10 @@ class EngineTestsController < ApplicationController
   
   def index
   end
+  
+  def json_model
+    dependencies << "objects/json3d"
+  end
 
   def height_map
     dependencies << 'engine/heightmap' << 'tests/engine/heightmap'
