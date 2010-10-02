@@ -4,7 +4,7 @@ function assert(cond, msg)
     if (!cond) { throw new Error(msg || "Assertion failed!"); }
   }
   catch (e) {
-    alert(e+"\n\n"+e.stack);
+    logger.error(e+"\n\n"+e.stack);
   }
 }
 

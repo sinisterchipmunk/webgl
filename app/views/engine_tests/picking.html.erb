@@ -11,7 +11,7 @@
   var selectedObject = null;
   var highlightShader = new Shader();
 
-var rot = 0;
+  var rot = 0;
   
   function update_debug()
   {
@@ -42,7 +42,6 @@ var rot = 0;
                                     "}";
   
   update_debug();
-  world.camera.move(-5);
   world.addObject(quad);
   world.addObject(sphere);
   quad.setColor([0.5,0.5,0.5,1]);
@@ -51,14 +50,16 @@ var rot = 0;
 <%end%>
 
 <%content_for :render do%>
+  useShader(shaders['color_without_texture']);
   if (selectedObject) selectedObject.shader = null;
   selectedObject = world.pick(mouse.x, mouse.y);
   if (selectedObject) selectedObject.shader = highlightShader;
+
   update_debug();
 
-  rot += 0.015;
-  var x = Math.cos(rot) * 5;
-  var z = Math.sin(rot) * 5;
+  rot += 0.03;
+  var x = Math.cos(rot) * 10;
+  var z = Math.sin(rot) * 10;
 
   world.camera.translateTo(x, 0, z);
   world.camera.lookAt(0,0,0);

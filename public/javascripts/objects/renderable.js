@@ -1,186 +1,251 @@
-function Renderable(init_func, update_func)
-{
-  var self = this;
-  self.object_id = Renderable.all.length;
-  Renderable.all.push(self);
-  
-  self.update = update_func;
-  self.init = init_func; 
-  self.orientation = new Camera();
-  var vertexBuffer = null, textureBuffer = null, colorBuffer = null, indexBuffer = null, normalBuffer = null;
-  var pickShader, updateInterval = null;
-  
-  var vertices = [], colors = [], textureCoords = [], normals = [], indices = [];
-  
-  function setColorCoords(count, color)
+var Renderable = function() {
+  // helpers
+  function setColorCoords(self, count, color)
   {
-    colors = [];
+    self.colors = [];
     for (var i = 0; i < count; i++)
       for (var j = 0; j < 4; j++)
-        colors.push(color[j]);
+        self.colors.push(color[j]);
+  }
+
+  function getPickShader(self) {
+    if (self.pickShader) return self.pickShader;
+    var color  = encodeToColor(self.object_id);
+    self.pickShader = new Shader();
+    self.pickShader.vertex.source = "attribute vec3 aVertexPosition;\n" +
+                                    "uniform mat4 uMVMatrix;\n" +
+                                    "uniform mat4 uPMatrix;\n" +
+                                    "void main(void) {\n" +
+                                    "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\n" +
+                                    "}";
+    
+    self.pickShader.fragment.source = "#ifdef GL_ES\n" +
+                                       "precision highp float;\n" +
+                                       "#endif\n" +
+                                       "void main(void) {\n" +
+                                       "  gl_FragColor = vec4("+color[0]/255+","+color[1]/255+","+color[2]/255+","+color[3]/255+");\n" +
+                                       "}";
+    
+    self.pickShader.setUniformValue('uMVMatrix', function() { return new Float32Array(mvMatrix.flatten()); });
+    self.pickShader.setUniformValue('uPMatrix',  function() { return new Float32Array(pMatrix.flatten());  });
+    
+    return self.pickShader;
   }
   
-  /* private function for generating this object's pick shader. */
-  function getPickShader() {
-    if (pickShader) return pickShader;
-    var color = encodeToColor(self.object_id);
-    pickShader = new Shader();
-    pickShader.vertex.source =   "attribute vec3 aVertexPosition;\n" +
-                                 "uniform mat4 uMVMatrix;\n" +
-                                 "uniform mat4 uPMatrix;\n" +
-                                 "void main(void) {\n" +
-                                 "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\n" +
-                                 "}";
-    
-    pickShader.fragment.source = "#ifdef GL_ES\n" +
-                                 "precision highp float;\n" +
-                                 "#endif\n" +
-                                 "void main(void) {\n" +
-                                 "  gl_FragColor = vec4("+color[0]/255+","+color[1]/255+","+color[2]/255+","+color[3]/255+");\n" +
-                                 "}";
-    
-    pickShader.setUniformValue('uMVMatrix', function() { return new Float32Array(mvMatrix.flatten()); });
-    pickShader.setUniformValue('uPMatrix',  function() { return new Float32Array(pMatrix.flatten());  });
-    
-    return pickShader;
-  }
-  
-  self.rebuildPickShader = function(index)
+  function disposeBuffer(self, name)
   {
-    self.object_id = typeof(index) == "undefined" || typeof(index) == "null" ? self.object_id : index;
-    if (pickShader) pickShader.dispose();
-    pickShader = false;
-    return getPickShader();
-  };
-  
-  self.setColor  = function(color) {
-    if (color.length == 4)
-    {
-      var numColors;
-      if (colors.length == 0) // user didn't set color indices, so we should rebuild them here
-        numColors = vertices.length / 3;
-      else
-        numColors = colors.length / 4;
-
-      setColorCoords(numColors, color);
+    var buf = self["get"+name]();
+    if (buf) {
+      gl.deleteBuffer(buf);
+      logger.debug(name);
+      logger.debug(self["set"+name]);
+      self["set"+name](null);
     }
-    else if (arguments.length == 4) { this.setColor([arguments[0], arguments[1], arguments[2], arguments[3]]); return; }
-    else colors = color;
-    this.rebuild();
-  };
+  }
   
-  this.render = function(mode) {
-    if (!vertexBuffer || !gl) return;
-    mode = mode || FILL;
+  function applyObjectSpaceMatrixTransformations(self)
+  {
+    // some setup
+    var matr = self.orientation.getMatrix().dup();
+    matr.elements[0][3] = matr.elements[1][3] = matr.elements[2][3] = 0;
+    var trans = Matrix.Translation($V(self.orientation.getPosition())).multiply(matr);
     
-    mvPushMatrix();
-      multMatrix(self.orientation.getMatrix());
+    mvMatrix = mvMatrix.x(trans);
+//    var tns = Matrix.I(4);
+//    for (var i = 0; i < 3; i++) tns.elements[3][i] = matr.elements[3][i] - mvMatrix.elements[3][i];
+////    multMatrix(tns);
+//    
+//    
+//    //var distance = 
+//            //[mvMatrix.elements[3][0], mvMatrix.elements[3][1], mvMatrix.elements[3][2]].minus(self.orientation.getPosition());
+//      
+//    // first apply rotation (have to zero out matr translation first)
+//    matr.elements[3][0] = matr.elements[3][1] = matr.elements[3][2] = 0;
+//    multMatrix(matr);
+//      
+//    // then apply translation
+//    //mvTranslate(distance[0], distance[1], distance[2]);
+  }
   
-      var shader = (mode == RENDER_PICK ? getPickShader() : self.shader) || activeShader;
-      shader.setAttribute('aVertexPosition', vertexBuffer);
-      if (indexBuffer)   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-      if (textureBuffer) shader.setAttribute('aTextureCoord', textureBuffer);
-      if (normalBuffer)  shader.setAttribute('aVertexNormal', normalBuffer);
-      if (colorBuffer)   shader.setAttribute('aVertexColor', colorBuffer);
-      if (self.texture)
+  // class
+  return Class.create({
+    initialize: function(init_func, update_func)
+    {
+      var self = this;
+      self.object_id = Renderable.all.length;
+      Renderable.all.push(self);
+      
+      if (init_func) self.init = init_func;
+      if (update_func) self.update = update_func;
+      self.orientation = new Camera();
+      self.buffers = [];
+      self.vertices = [];
+      self.colors = [];
+      self.textureCoords = [];
+      self.normals = [];
+      self.indices = [];
+      
+      if (gl) self.rebuild();
+      else after_initialize(function() { self.rebuild(); });
+    },
+    
+    getGLVertexBuffer:        function() { return this.buffers['vertices'];      },
+    getGLColorBuffer:         function() { return this.buffers['colors'];        },
+    getGLIndexBuffer:         function() { return this.buffers['indices'];       },
+    getGLNormalBuffer:        function() { return this.buffers['normals'];       },
+    getGLTextureCoordsBuffer: function() { return this.buffers['textureCoords']; },
+    
+    setGLVertexBuffer:        function(buf) { this.buffers['vertices']      = buf; },
+    setGLColorBuffer:         function(buf) { this.buffers['colors']        = buf; },
+    setGLIndexBuffer:         function(buf) { this.buffers['indices']       = buf; },
+    setGLNormalBuffer:        function(buf) { this.buffers['normals']       = buf; },
+    setGLTextureCoordsBuffer: function(buf) { this.buffers['textureCoords'] = buf; },
+    
+    rebuildPickShader: function(index) {
+      this.object_id = typeof(index) == "undefined" || index == null ? this.object_id : index;
+      if (this.pickShader) this.pickShader.dispose();
+      this.pickShader = false;
+      return getPickShader(this);
+    },
+    
+    setColor: function(color) {
+      if (color.length == 4) { this.color = color; this.colors = []; }
+      else if (arguments.length == 4) { this.setColor([arguments[0], arguments[1], arguments[2], arguments[3]]); return; }
+      else this.colors = color;
+      this.rebuild();
+    },
+    
+    render: function(mode) {
+      var self = this;
+      var vertexBuffer = this.getGLVertexBuffer(), indexBuffer = this.getGLIndexBuffer(),
+          textureBuffer = this.getGLTextureCoordsBuffer(), normalBuffer = this.getGLNormalBuffer(),
+          colorBuffer = this.getGLColorBuffer();
+      
+      if (!vertexBuffer || !gl) return;
+      mode = mode || FILL;
+      mvPushMatrix();
+        applyObjectSpaceMatrixTransformations(self);
+      
+        var shader = (mode == RENDER_PICK ? getPickShader(self) : self.shader);
+        shader = shader || shaders[activeShaderName] || shaders['color_without_texture'];
+        shader.setAttribute('aVertexPosition', vertexBuffer);
+        if (indexBuffer)   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        if (textureBuffer) shader.setAttribute('aTextureCoord', textureBuffer);
+        if (normalBuffer)  shader.setAttribute('aVertexNormal', normalBuffer);
+        if (colorBuffer)   shader.setAttribute('aVertexColor', colorBuffer);
+        if (self.texture)
+        {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, this.texture);
+          shader.uniform('uSampler', 'uniform1i').value = 0;
+        }
+        shader.bind(function() {
+          var enum = self.DRAW_MODE;
+          if (mode == WIREFRAME) enum = gl.LINE_STRIP;
+          
+          if (indexBuffer) gl.drawElements(enum, self.indices.length, gl.UNSIGNED_SHORT, 0);
+          else gl.drawArrays(enum, 0, vertexBuffer.numItems);
+          checkGLError();
+        });
+          
+        mvPopMatrix();
+      checkGLError();
+    },
+    
+    dispose: function() {
+      if (gl)
       {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        shader.uniform('uSampler', 'uniform1i').value = 0;
+        disposeBuffer(this, 'GLVertexBuffer');
+        disposeBuffer(this, 'GLColorBuffer');
+        disposeBuffer(this, 'GLTextureCoordsBuffer');
+        disposeBuffer(this, 'GLIndexBuffer');
+        disposeBuffer(this, 'GLNormalBuffer');
+        if (this.pickShader)           this.pickShader.dispose();
+        this.vertices      = [];
+        this.colors        = [];
+        this.textureCoords = [];
+        this.normals       = [];
+        this.indices       = [];
       }
-      shader.bind(function() {
-        var enum = gl.TRIANGLES;
-        if (mode == WIREFRAME) enum = gl.LINE_STRIP;
-        
-        if (indexBuffer) gl.drawElements(enum, indices.length, gl.UNSIGNED_SHORT, 0);
-        else gl.drawArrays(enum, 0, vertexBuffer.numItems);
-        checkGLError();
-      });
-        
-      mvPopMatrix();
-    checkGLError();
-  };
-  
-  this.dispose = function() {
-    if (gl)
-    {
-      if (vertexBuffer)  gl.deleteBuffer(vertexBuffer);
-      if (colorBuffer)   gl.deleteBuffer(colorBuffer);
-      if (textureBuffer) gl.deleteBuffer(textureBuffer);
-      if (indexBuffer)   gl.deleteBuffer(indexBuffer);
-      if (normalBuffer)  gl.deleteBuffer(normalBuffer);
-      if (pickShader)    pickShader.dispose();
-      vertices = [];
-      colors = [];
-      textureCoords = [];
-      normals = [];
-      indices = [];
-    }
-  };
-  
-  this.rebuild = function() {
-    if (vertexBuffer) self.dispose();
+    },
     
-    if (self.init) self.init(vertices, colors, textureCoords, normals, indices);
-    
-    if (colors.length == 0) setColorCoords(vertices.length / 3, [1,1,1,1]);
-    
-    if (vertices.length > 0)
-    {
-      vertexBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-      vertexBuffer.itemSize = 3;
-      vertexBuffer.numItems = vertices.length / 3;
-    }
-    
-    if (colors.length > 0)
-    {
-      colorBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-      colorBuffer.itemSize = 4;
-      colorBuffer.numItems = colors.length / 4;
-    }
-    
-    if (textureCoords.length > 0)
-    {
-      textureBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-      textureBuffer.itemSize = 2;
-      textureBuffer.numItems = textureCoords.length / 2;
-    }
-    
-    if (indices.length > 0)
-    {
-      indexBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STREAM_DRAW);
-      indexBuffer.itemSize = 1;
-      indexBuffer.numItems = indices.length;
-    }
-    
-    if (normals.length > 0)
-    {
-      normalBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
-      normalBuffer.itemSize = 3;
-      normalBuffer.numItems = normals.length / 3;
-    }
-    
-    if (updateInterval) clearInterval(updateInterval);
-    setInterval(function() { if (self.update) self.update(); }, Renderable.update_interval);
-  };
-  
-  if (gl) self.rebuild();
-  else after_initialize(self.rebuild);
-}
+    rebuild: function() {
+      var self = this;
+      self.DRAW_MODE = gl.TRIANGLES;
 
-Renderable.prototype = {
-  
-};
+      var colors = [];
+      if (self.getGLVertexBuffer()) self.dispose();
+      if (self.init) self.init(self.vertices, colors, self.textureCoords, self.normals, self.indices);
+      if (self.color) // something has already set the color
+      {
+        setColorCoords(self, self.vertices.length / 3, self.color || [1,1,1,1]);
+      }
+      else if (colors.length == 0) // color isn't set, and user didn't set any during init()
+      {
+        if (self.colors.length == 0) // and none are already set
+        {
+          setColorCoords(self, self.vertices.length / 3, [1,1,1,1]);
+        }
+        else ; // color isn't explicitly set, but color vertices exist, so use them.
+      }
+      else self.colors = colors;
+      
+      var buffer;
+      if (self.vertices.length > 0)
+      {
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(self.vertices), gl.STATIC_DRAW);
+        buffer.itemSize = 3;
+        buffer.numItems = self.vertices.length / 3;
+        self.setGLVertexBuffer(buffer);
+      }
+      
+      if (self.colors.length > 0)
+      {
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(self.colors), gl.STATIC_DRAW);
+        buffer.itemSize = 4;
+        buffer.numItems = self.colors.length / 4;
+        self.setGLColorBuffer(buffer);
+      }
+      
+      if (self.textureCoords.length > 0)
+      {
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(self.textureCoords), gl.STATIC_DRAW);
+        buffer.itemSize = 2;
+        buffer.numItems = self.textureCoords.length / 2;
+        self.setGLTextureCoordsBuffer(buffer);
+      }
+      
+      if (self.indices.length > 0)
+      {
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(self.indices), gl.STREAM_DRAW);
+        buffer.itemSize = 1;
+        buffer.numItems = self.indices.length;
+        self.setGLIndexBuffer(buffer);
+      }
+      
+      if (self.normals.length > 0)
+      {
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(self.normals), gl.STATIC_DRAW);
+        buffer.itemSize = 3;
+        buffer.numItems = self.normals.length / 3;
+        self.setGLNormalBuffer(buffer);
+      }
+      
+      if (self.updateInterval) clearInterval(self.updateInterval);
+      self.updateInterval = setInterval(function() { if (self.update) self.update(); }, Renderable.update_interval);
+    }
+  });
+}();
 
 Renderable.all = [];
 Renderable.update_interval = 30;

@@ -22,7 +22,7 @@ class EngineTestsController < ApplicationController
   end
   
   def picking
-    dependencies << 'tests/engine/world' << 'objects/quad' << "engine/shader" << "objects/sphere"
+    dependencies << 'tests/engine/world' << 'objects/quad' << "objects/sphere"
   end
   
   def dynamic_shader
@@ -39,6 +39,7 @@ class EngineTestsController < ApplicationController
   
   def ruby_layer
     objects << WebGL::Quad.new(1, 1)
+    objects << WebGL::Sphere.new(0.5)
     dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
   end
   

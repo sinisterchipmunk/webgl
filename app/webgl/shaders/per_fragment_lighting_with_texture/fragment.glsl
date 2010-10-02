@@ -24,14 +24,21 @@ void main(void) {
   if (!uUseLighting) {
     lightWeighting = vec3(1.0, 1.0, 1.0);
   } else {
-    vec3 lightDirection = normalize(uPointLightLocation - vPosition.xyz);
+  
+//att = 1.0 / (lightAttenuationi[0] + lightAttenuationi[1] * lightdisti + lightAttenuationi[2] * lightdisti * lightdisti);
+  
+  
+    vec3 lightDist = uPointLightLocation - vPosition.xyz;
+    float lightDistMag = length(lightDist);
+    vec3 lightDirection = normalize(lightDist);
+    float atte = 1.0 / (1.0 + 0.002 * lightDistMag + 0.0008 * lightDistMag * lightDistMag);
     //vec4 transformedNormal = nMatrix * vec4(aVertexNormal, 1.0);
 
     float directionalLightWeighting = max(dot(vTransformedNormal.xyz, uLightingDirection), 0.0);
     float pointLightWeighting = max(dot(normalize(vTransformedNormal.xyz), lightDirection), 0.0);
     lightWeighting = uAmbientColor +
                      uDirectionalColor * directionalLightWeighting +
-                     uPointLightColor * pointLightWeighting;
+                     uPointLightColor * pointLightWeighting;// * atte;
   }
 
   vec4 fragmentColor;

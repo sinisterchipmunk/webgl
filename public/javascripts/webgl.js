@@ -32,7 +32,9 @@ function checkGLError()
     var err = new Error(str);
     var stack = err.stack.split("\n");
     stack.shift();
-    alert(err+"\n\n"+stack.join("\n"));
+    var message = err+"\n\n"+stack.join("\n");
+    if (logger) logger.error(message);
+    else alert(message);
     throw err;
   }
 }

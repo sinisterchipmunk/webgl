@@ -1,18 +1,20 @@
 <script>
   <%content_for :global do%>
     var height_map;
+    var camera = new Camera();
   <%end%>
   
   <%content_for :init do%>
     height_map = new HeightMap(gl, document.getElementById('heightmap'));
     height_map.magnitude = 5;
     height_map.rebuild();
+  
+    camera.translateTo(25,55,70);
+    camera.lookAt(25,0,35);
   <%end%>
   
   <%content_for :render do%>
-    multMatrix(makeLookAt(25,70,60,  25,0,35,  0,0,-1));
-    setMatrixUniforms();
-                
+    camera.look(gl);
     height_map.render(WIREFRAME);
   <%end%>
   

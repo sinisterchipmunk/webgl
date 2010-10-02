@@ -1,5 +1,6 @@
 <script><%content_for :global do%>
   var quad = new Quad(1, 1);
+  var camera = new Camera();
 
   function handleTextureLoaded(image, texture) {
     try {
@@ -11,23 +12,31 @@
       gl.bindTexture(gl.TEXTURE_2D, null);
         
       quad.texture = texture;
+      quad.shader = shaders['color_with_texture'];
     } catch(e) { alert(e+"\n\n"+e.stack); }
   }
 <%end%>
 
 <%content_for :init do%>
-  var grass = gl.createTexture();  
+  var grass = gl.createTexture();
   var img = new Image();  
   img.onload = function() {
     // 1 second timeout so that we can test that quad renders without a texture.
     setTimeout(function() { handleTextureLoaded(img, grass); }, 1000);
   };
   img.src = "http://localhost/images/textures/poormansgrass.png";  
+
+  quad.shader = shaders['color_without_texture'];
+  camera.translateTo(0,0,5);
+  camera.lookAt(0,0,0);
 <%end%>
 
 <%content_for :render do%>
-  mvTranslate(0, 0, -5);
-  setMatrixUniforms();
-
+  camera.look(gl);
   quad.render();
 <%end%></script>
+
+<p>This demo very simply shows the binding of textures. When it is first loaded, no texture is bound and the
+quad's color is set to [1,1,1,1] -- or full white. After a 1.0 second delay, the texture will be retrieved
+from the server and bound to the quad. At this time, the shader is changed from 'color_without_texture' to
+'color_with_texture' and the texture should be visible.</p>

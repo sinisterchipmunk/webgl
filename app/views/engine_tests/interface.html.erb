@@ -5,7 +5,6 @@
   var heightMap;
 
   function initTextures() {  
-    //gl.enable(gl.TEXTURE_2D);  
     var grass = gl.createTexture();  
     var img = new Image();  
     img.onload = function() { handleTextureLoaded(img, grass); };  
@@ -61,7 +60,7 @@
   };
   img.src = "http://localhost/~colin/rails-game/images/height.png";
 
-  camera.moveTo(35, 75, 35);
+  camera.moveTo(35, 75, 42);
   camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
       
   setInterval(updateKeyboardInput, 15);
@@ -71,9 +70,6 @@
   if (!heightMap) return;
   camera.look(gl);
   
-  mvTranslate(0, 0, -7);
-  setMatrixUniforms();
-      
   heightMap.render();
 <%end%>
 </script>

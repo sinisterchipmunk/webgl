@@ -142,48 +142,35 @@ function HeightMap(gl, image, options)
   
   // mode is an optional render mode such as FILL, WIREFRAME, etc. and defaults to FILL.
   self.render = function(mode) {
-    try {
-      var self = this;
-      var gl = self.gl;
-  
-      mode = mode || FILL;
-  
-      var shaderProgram;
-      if (textureBuffers.length > 0)
-      {
-        useShader('color_with_texture');
-        setMatrixUniforms();
-        shaderProgram = shaders['color_with_texture'];
-        for (var i = 0; i < textureBuffers.length && i < 32; i++) // 32 is max supported by GL
-        {
-          gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffers[i]);
-          gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, textureBuffers[i].itemSize, gl.FLOAT, false, 0, 0);
+    var self = this;
+    var gl = self.gl;
 
-          gl.activeTexture(eval("gl.TEXTURE"+i));  
-          gl.bindTexture(gl.TEXTURE_2D, textureBuffers[i].texture);  
-          gl.uniform1i(shaderProgram.samplers[i], i);
-        }
-      }
-      else
-      {
-        useShader('color_without_texture');
-        shaderProgram = shaders['color_without_texture'];
-      }
-  
-      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    mode = mode || FILL;
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-      gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
-          
+    var shader;
+    if (textureBuffers.length > 0)
+    {
+      shader = shaders['color_with_texture'];
+      for (var i = 0; i < textureBuffers.length && i < 32; i++) // 32 is max supported by GL
+      {
+        shader.setAttribute('aTextureCoord', textureBuffers[i]);
+        gl.activeTexture(eval("gl.TEXTURE"+i));  
+        gl.bindTexture(gl.TEXTURE_2D, textureBuffers[i].texture);
+        shader.uniform("textures[0]", "uniform1i").value = i;
+      }
+    }
+    else
+      shader = shaders['color_without_texture'];
+
+    shader.setAttribute('aVertexPosition', vertexBuffer);
+    shader.setAttribute('aVertexColor', colorBuffer);
+
+    shader.bind(function() {
       if (mode == FILL)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
       else if (mode == WIREFRAME)
         gl.drawArrays(gl.LINE_STRIP, 0, vertexBuffer.numItems);
-    }
-    catch (e) {
-      alert(e+"\n\n"+(e.stack || "(no further information available)"));
-    }
+    });
   };
   
   self.rebuild(image);

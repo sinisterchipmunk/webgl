@@ -2,7 +2,8 @@
   <%content_for :global do%>
     var world = new World();
     var renderable = new Renderable(
-      function(vertices, colors, textureCoords, normals, indices) { // init
+      // init
+      function(vertices, colors, textureCoords, normals, indices) {
         vertices.push( 0,  1, 0);
         vertices.push(-1, -1, 0);
         vertices.push( 1, -1, 0);
@@ -11,9 +12,12 @@
         textureCoords.push(0, 1);
         textureCoords.push(1, 1);
       },
-      function() { // update
+            
+      // update
+      function() {
         this.orientation.rotateView(0.15, 0);
-      });
+      }
+    );
   <%end%>
           
   <%content_for :init do%>
@@ -42,3 +46,12 @@
     renderable.render();
   <%end%>
 </script>
+
+<%content_for :head do%>
+  <style>#canvas { float: left; }</style>
+<%end%>
+
+<p>This test demonstrates use of the JavaScript <strong>Renderable</strong> function, which allows a standard object to be
+created by passing only an initialization function and an update function. All other functionality is added by the
+Renderable function.</p>
+<p>See this example's source code for more details.</p>

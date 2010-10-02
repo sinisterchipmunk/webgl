@@ -4,24 +4,20 @@
 
 <script>
 <%content_for :global do%>
+  require("objects/renderable");
+
   var colorBuffer, vertexBuffer;
   var camera = new Camera();
-  var vertices = [ 0,  1, 0,
-                  -1, -1, 0,
-                   1, -1, 0 ];
-  var colors = [ 1, 0, 0, 1,
-                 0, 1, 0, 1,
-                 0, 0, 1, 1 ];
+  var tri = new Renderable(function(vertices, colors) {
+    vertices.push(0,1,-1);
+    vertices.push(-1,-1,-1);
+    vertices.push(1,-1,-1);
+    
+    colors.push(1,0,0,1);
+    colors.push(0,1,0,1);
+    colors.push(0,0,1,1);
+  });
   var rotation = [0,0,0], translation = [0,0,0];
-
-  function drawTri()
-  {
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.vertexAttribPointer(shaders['color_with_texture'].vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.vertexAttribPointer(shaders['color_with_texture'].vertexColorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems);
-  }
 
   function updateKeyboardInput()
   {
@@ -32,7 +28,7 @@
     var strafing_speed = 1.0;
     
     movement_speed *= 0.15; // because that's the delay between frames (via setInterval, above)
-    rotation_speed *= 0.075; // in an offline app we'd calculate time elapsed between frames.
+    rotation_speed *= 0.15; // in an offline app we'd calculate time elapsed between frames.
     strafing_speed *= 0.15;
     
     if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
@@ -51,20 +47,10 @@
 <%end%>
 
 <%content_for :init do%>
-  /* set up the triangle, which will provide a centerpiece for our scene */
-  vertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  vertexBuffer.itemSize = 3;
-  vertexBuffer.numItems = vertices.length/3;
-        
-  colorBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-  colorBuffer.itemSize = 4;
-  colorBuffer.numItems = colors.length / 4;
-        
+  camera.translateTo(0,0,5);
+  camera.lookAt(0,0,0);
   setInterval(updateKeyboardInput, 15);
+  tri.shader = shaders['color_without_texture'];
 <%end%>
 
 <%content_for :render do%>
@@ -79,11 +65,8 @@
                       "Right: "+right.toSource()+"<br/>" +
                       "Magnitude: "+pos.magnitude();
   } catch(e) { alert(e+"\n\n"+e.stack); }
-  
-  mvTranslate(0, 0, -7);
-  setMatrixUniforms();
-        
-  drawTri();
+
+  tri.render();
 <%end%>
 </script>
 

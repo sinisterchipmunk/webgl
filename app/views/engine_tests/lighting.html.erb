@@ -4,24 +4,19 @@
   var shader = new Shader();
   var sphere = new Sphere(1);
   var sphere2 = new Sphere(1);
-  var rotation = [0,0];
-  var quad = new Quad(1, 1);
 <%end%>
 
 <%content_for :init do%>
-  camera.translateTo(0,0,5);
-  camera.lookAt(0,0,0);
+  camera.translateTo(0,0,6);
 
-  sphere.orientation.translateTo(1.5,0,0);
-  sphere2.orientation.translateTo(-1.5,0,3);
-  quad.orientation.translateTo(0,0,-2);
+  sphere.orientation.translateTo(2,0,0);
+  sphere2.orientation.translateTo(-2,0,3);
 
   shader.vertex.source   = <%=shaders['per_fragment_lighting_with_texture'].vertex_source.to_json.html_safe%>;
   shader.fragment.source = <%=shaders['per_fragment_lighting_with_texture'].fragment_source.to_json.html_safe%>;
 
   sphere.shader = shader;
   sphere2.shader = shader;
-  //quad.shader = shader;
   
   drawScene.blocking = true;
 
@@ -37,7 +32,6 @@
     
     sphere.texture = texture;
     sphere2.texture = texture;
-    quad.texture = texture;
     
     drawScene.blocking = false;
   };
@@ -97,7 +91,10 @@
 
 <%content_for :mouse_dragged do%>
   if (mouse.diffy || mouse.diffx)
+  {
     sphere.orientation.rotateView(-mouse.diffy / 10, mouse.diffx / 10, 0);
+    sphere2.orientation.rotateView(-mouse.diffy / 10, mouse.diffx / 10, 0);
+  }
 <%end%>
 
 <%content_for :mouse_moved do%>
@@ -117,9 +114,6 @@
 
 <%content_for :render do%>
   camera.look(gl);
-//  quad.orientation.lookAt(pointLocation);
-//  quad.render();
-  sphere.orientation.rotateView(rotation[0], rotation[1], 0);
   sphere.render();
   sphere2.render();
 <%end%>
