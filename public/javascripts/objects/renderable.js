@@ -154,7 +154,8 @@ var Renderable = function() {
           if (self.texture)
           {
             context.gl.activeTexture(GL_TEXTURE0);
-            context.gl.bindTexture(GL_TEXTURE_2D, self.texture);
+            if (self.texture.bind) self.texture.bind(context);
+            else context.gl.bindTexture(GL_TEXTURE_2D, self.texture);
             shader.uniform('uSampler', 'uniform1i').value = 0;
           }
           shader.bind(function() {

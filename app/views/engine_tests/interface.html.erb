@@ -2,26 +2,6 @@
 <%content_for :global do %>
   var heightMap;
 
-  function initTextures() {  
-    var grass = gl.createTexture();  
-    var img = new Image();  
-    img.onload = function() { handleTextureLoaded(img, grass); };  
-    img.src = "/images/textures/poormansgrass.png";  
-  }  
-      
-  function handleTextureLoaded(image, texture) {
-    logger.attempt("add texture", function() {
-      gl.bindTexture(gl.TEXTURE_2D, texture);  
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-      gl.generateMipmap(gl.TEXTURE_2D);  
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      
-      heightMap.addTexture(texture, {scale:3});
-    });
-  }  
-    
   function updateKeyboardInput()
   {
     var rotation = [0,0,0];
@@ -54,7 +34,7 @@
     heightMap = new HeightMap(img, {magnitude:4});
     world.addObject(heightMap);
     context.checkError();
-    initTextures();
+    heightMap.addTexture(new Texture("/images/textures/poormansgrass.png"), {scale:3});
     context.checkError();
   };
   img.src = "/images/height.png";
@@ -62,14 +42,10 @@
   world.camera.moveTo(35, 75, 42);
   world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
       
-  setInterval(updateKeyboardInput, 15);
+  setInterval(updateKeyboardInput, 30);
 <%end%>
 
 <%content_for :render do%>
-  if (!heightMap) return;
   world.render();
-//  camera.look(gl);
-//  
-//  heightMap.render();
 <%end%>
 </script>

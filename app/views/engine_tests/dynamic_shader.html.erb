@@ -17,30 +17,32 @@
                            "}";
   shader.vertex.source = "attribute vec3 aVertexPosition;\n" +
                             
-                         "uniform mat4 uMVMatrix;\n" +
-                         "uniform mat4 uPMatrix;\n" +
+                         "uniform mat4 mvMatrix;\n" +
+                         "uniform mat4 pMatrix;\n" +
                             
                          "void main(void) {\n" +
-                         "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\n" +
+                         "  gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);\n" +
                          "}";
 
 
-  shader.uniforms('uMVMatrix', 'uniformMatrix4fv').value = function() { return new Float32Array(mvMatrix.flatten()); };
-  shader.uniforms('uPMatrix',  'uniformMatrix4fv').value = function() { return new Float32Array(pMatrix.flatten());  };
+  // Here's how to set a uniform. It's commented out here because as long as we stick to convention, the mvMatrix,
+  // pMatrix and nMatrix uniforms are populated for us automatically by Shader().
+  //
+  // the value can be an explicit value or the return value of a function for a deferred value.
+  //
+  // shader.uniforms('uPMatrix',  'uniformMatrix4fv').value = function() { return new Float32Array(pMatrix.flatten()); };
 <%end%>
 
 <%content_for :init do%>
   shader.context = context;
 
-  // we COULD do this, but the shader should compile itself as needed when its program is used, as well.
-  //  shader.compile();
+  world.addObject(quad);
+  world.camera.translate(0,0,-5);
+  quad.shader = shader;
 <%end%>
 
 <%content_for :render do%>
-  mvTranslate(0,0,-5);
-
-  quad.shader = shader;
-  quad.render(shader.context);
+  world.render();
 <%end%>
 </script>
 

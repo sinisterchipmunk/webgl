@@ -1,25 +1,12 @@
 <script>
   <%content_for :global do%>
-//    var world = new World();
     var teapot = null;
     var texture = null;
   <%end%>
           
   <%content_for :init do%>
     JSON3D.load("/3d/teapot.json", function(obj) { world.addObject(teapot = obj); });
-
-    var img = new Image();
-    img.onload = function() {
-      texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);  
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-      gl.generateMipmap(gl.TEXTURE_2D);  
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    };
-    img.src = "/images/textures/poormansgrass.png";  
-
+    texture = new Texture("/images/textures/poormansgrass.png");
     world.camera.translateTo(0,0,50);
   <%end%>
           
@@ -47,4 +34,4 @@
   <style>#canvas { float: left; }</style>
 <%end%>
 
-<input type='checkbox' id='use-texture' /> Use Texture
+<input type='checkbox' id='use-texture' checked /> Use Texture

@@ -122,6 +122,7 @@ var WebGLContext = function() {
       var gl = context.gl;
       var shaders = context.shaders;
     
+      if (!name) throw new Error("No shader or shader name given!");
       if (name.context && name.context != this) throw new Error("Tried to use a shader from a different context!");
       if (name.getCompiledProgram) name = name.getCompiledProgram();
       if ((name != this.activeShaderName && name != this.activeShader) || !this.activeShader)

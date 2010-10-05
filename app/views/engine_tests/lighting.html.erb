@@ -18,24 +18,7 @@
   
   drawScene.blocking = true;
 
-  var img = new Image();
-  img.onload = function() {
-    logger.attempt("textures", function() {
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);  
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-      gl.generateMipmap(gl.TEXTURE_2D);  
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    
-      sphere.texture = texture;
-      sphere2.texture = texture;
-    
-      drawScene.blocking = false;
-    });
-  };
-  img.src = "/images/textures/poormansgrass.png";
+  sphere.texture = sphere2.texture = new Texture("/images/textures/poormansgrass.png");
 
   var direction = [-1,-1,-1];
   var dircolor = [.8,.8,.8];
