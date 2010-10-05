@@ -194,9 +194,12 @@ WebGLContext.identifier = 0;
   var enums = ['UNSIGNED_BYTE', 'FLOAT', 'TEXTURE_2D', 'FRAGMENT_SHADER', "VERTEX_SHADER", "COLOR_BUFFER_BIT",
                "DEPTH_BUFFER_BIT", "TRIANGLE_STRIP", "TRIANGLES", "LINE_STRIP", "LINES", "ELEMENT_ARRAY_BUFFER",
                "TEXTURE0", 'UNSIGNED_SHORT', 'RGBA', 'TEXTURE_MAG_FILTER', 'LINEAR', 'LINEAR_MIPMAP_NEAREST',
-               'TEXTURE_MIN_FILTER'];
+               'TEXTURE_MIN_FILTER', 'ARRAY_BUFFER', 'STATIC_DRAW', 'STREAM_DRAW'];
   window.GL_MAX_VERTEX_ATTRIBS = context.gl.getParameter(context.gl.MAX_VERTEX_ATTRIBS);
   for (i = 0; i < enums.length; i++) window["GL_"+enums[i]] = context.gl[enums[i]];
+  
+  window.GL_TEXTURES = [];
+  for (i = 0; i < 32; i++) window.GL_TEXTURES[i] = context.gl["TEXTURE"+i];
   
   /* now this part is confusing. For each function in the gl context, we're going to create a version within the
      WebGLContext prototype which basically does some error checking for us. This prevents us having to call

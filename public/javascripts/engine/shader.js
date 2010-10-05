@@ -127,7 +127,10 @@ function Shader(options)
       if (location > -1)
         if (attribute.buffer)
         {
-          gl.bindBuffer(gl.ARRAY_BUFFER, attribute.buffer);
+          if (attribute.buffer.buffer)
+            gl.bindBuffer(attribute.buffer.bufferType, attribute.buffer.buffer);
+          else
+            gl.bindBuffer(gl.ARRAY_BUFFER, attribute.buffer);
           self.context.checkError();
           gl.enableVertexAttribArray(location);
           self.context.checkError();

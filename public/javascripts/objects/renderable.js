@@ -32,11 +32,21 @@ var Renderable = function() {
     return self.pickShader;
   }
   
+  function buildTexture(self, context, descriptor) {
+    var coords = [];
+    for (var i = 0; i < self.originalTextureCoords.length; i += 2)
+      coords.push(self.originalTextureCoords[i]*descriptor.scaleX, self.originalTextureCoords[i+1]*descriptor.scaleY);
+    if (coords.length != 0)
+      descriptor.buffers[context.id] = new TextureCoordsBuffer(context, coords);
+  }
+  
   function disposeBuffer(self, name, context)
   {
     var buf = self["get"+name](context);
     if (buf) {
-      context.gl.deleteBuffer(buf);
+      if (buf.dispose) buf.dispose();
+      // since there's a Buffer object now, this next should never happen - but it's not hurting...
+      else context.gl.deleteBuffer(buf);
       self["set"+name](context, null);
     }
   }
@@ -61,23 +71,64 @@ var Renderable = function() {
       
       if (init_func) self.init = init_func;
       if (update_func) self.update = update_func;
-      //self.shader = self.shader || "color_without_texture";
+      
       self.built = {};
       self.orientation = new Camera();
       self.buffers = {};
       self.pickShader = false;
       self.textures = [];
+      self.textureBuildQueue = [];
     },
     
     addTexture: function(tex, options) {
       this.setTexture(this.textures.length, tex, options);
     },
     
+    /*
+     valid options include: 
+       scale  - how many times this texture will be tiled over the object. Defaults to 1.
+       scaleX - just like scale, but is only applied horizontally.
+       scaleY - just like scale, but is only applied vertically.
+    */
     setTexture: function(index, tex, options) {
-      //self.originalTextureCoords = null;
-      if (index == 0) this.texture = tex;
-      if (index >= 32) throw new Error("WebGL does not support more than 32 texture bindings at once");
-      this.textures[index] = tex;
+      var self = this, j;
+      options = options || {};
+      var context = options.context;
+      
+      logger.attempt("Renderable#setTexture", function() {
+        if (index < 0)   throw new Error("Invalid texture index: "+index);
+        if (index >= 32) throw new Error("WebGL does not support more than 32 texture bindings at once");
+        
+        self.originalTextureCoords = self.originalTextureCoords || [];
+        
+        var descriptor = self.textures[index] || {buffers:{}};
+        self.textures[index] = descriptor;
+        
+        // initialize unspecified options
+        descriptor.scale  = options.scale  || descriptor.scale  || 1;
+        descriptor.scaleX = options.scaleX || descriptor.scaleX || descriptor.scale;
+        descriptor.scaleY = options.scaleY || descriptor.scaleY || descriptor.scale;
+                
+        // set the new texture object
+        if (typeof(tex) == "string") descriptor.texture = new Texture(tex);
+        else descriptor.texture = tex;
+        if (index == 0)  self.texture = descriptor;
+        
+        
+        // free the GL buffers or they won't be rebuilt
+        for (var bufname in descriptor.buffers) {
+          var buffer = descriptor.buffers[bufname];
+          descriptor.buffer.dispose();
+        
+          // clear the corresponding JS buffer so we can replace its contents
+          descriptor.buffer.js.clear();
+
+          // fill it with the new data. Its GL counterpart will get rebuilt during the first render.
+          for (j = 0; j < self.originalTextureCoords.length; j += 2)
+            descriptor.buffer.js.push(self.originalTextureCoords[j]*descriptor.scaleX,
+                                      self.originalTextureCoords[j]*descriptor.scaleY);
+        }
+      });
     },
     
     getGLBuffer: function(context, name) {
@@ -87,7 +138,8 @@ var Renderable = function() {
       else return (this.buffers[context.id] = {})[name];
     },
     
-    setGLBuffer: function(context, name, buf) {
+    setGLBuffer: function(name, buf) {
+      var context = buf.context;
       if (!context) throw new Error("No context given!");
       if (!name) throw new Error("No name given!");
       if (typeof(buf) == "undefined") throw new Error("No buffer given!");
@@ -99,13 +151,11 @@ var Renderable = function() {
     getGLColorBuffer:         function(context) { return this.getGLBuffer(context, 'colors');        },
     getGLIndexBuffer:         function(context) { return this.getGLBuffer(context, 'indices');       },
     getGLNormalBuffer:        function(context) { return this.getGLBuffer(context, 'normals');       },
-    getGLTextureCoordsBuffer: function(context) { return this.getGLBuffer(context, 'textureCoords'); },
     
-    setGLVertexBuffer:        function(context, buf) { this.setGLBuffer(context, 'vertices',      buf); },
-    setGLColorBuffer:         function(context, buf) { this.setGLBuffer(context, 'colors',        buf); },
-    setGLIndexBuffer:         function(context, buf) { this.setGLBuffer(context, 'indices',       buf); },
-    setGLNormalBuffer:        function(context, buf) { this.setGLBuffer(context, 'normals',       buf); },
-    setGLTextureCoordsBuffer: function(context, buf) { this.setGLBuffer(context, 'textureCoords', buf); },
+    setGLVertexBuffer:        function(buf) { this.setGLBuffer('vertices',      buf); },
+    setGLColorBuffer:         function(buf) { this.setGLBuffer('colors',        buf); },
+    setGLIndexBuffer:         function(buf) { this.setGLBuffer('indices',       buf); },
+    setGLNormalBuffer:        function(buf) { this.setGLBuffer('normals',       buf); },
     
     rebuildPickShader: function(context, index) {
       if (!context) throw new Error("No context given!");
@@ -129,47 +179,61 @@ var Renderable = function() {
     
     render: function(context, mode) {
       var self = this;
-      if (self.texture && self.texture != self.textures[0]) self.setTexture(0, self.texture);
       logger.attempt('Renderable#render', function() {
-        if (!self.isBuiltFor(context)) { self.rebuild(context); }
+        // make sure everything's up to date.
+        if (self.texture && self.texture != self.textures[0]) self.setTexture(0, self.texture);
+        if (!self.isBuiltFor(context))                        self.rebuild(context);
+        
+        
+        // get the related buffers.
         var vertexBuffer  = self.getGLVertexBuffer(context),        indexBuffer  = self.getGLIndexBuffer(context),
-            textureBuffer = self.getGLTextureCoordsBuffer(context), normalBuffer = self.getGLNormalBuffer(context),
-            colorBuffer   = self.getGLColorBuffer(context);
+            normalBuffer = self.getGLNormalBuffer(context),         colorBuffer   = self.getGLColorBuffer(context);
+            //textureBuffer = self.getGLTextureCoordsBuffer(context);
         
         mode = mode || FILL;
         mvPushMatrix();
           applyObjectSpaceMatrixTransformations(self);
         
+          // get the active shader
           var shader = (mode == RENDER_PICK ? getPickShader(self, context) : self.shader);
           shader = shader || (self.texture && 'color_with_texture' || 'color_without_texture');
           if (typeof(shader) == "string") shader = context.shaders[shader];
           else if (shader.context != context)
             throw new Error("Tried to render an object using a shader from a different context than the current one! (Try using the name of the shader instead)");
   
+          // set the shader attributes
           shader.setAttribute('aVertexPosition', vertexBuffer);
           if (indexBuffer)   context.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-          if (textureBuffer) shader.setAttribute('aTextureCoord', textureBuffer);
           if (normalBuffer)  shader.setAttribute('aVertexNormal', normalBuffer);
           if (colorBuffer)   shader.setAttribute('aVertexColor', colorBuffer);
-          if (self.texture)
-          {
-            context.gl.activeTexture(GL_TEXTURE0);
-            if (self.texture.bind) self.texture.bind(context);
-            else context.gl.bindTexture(GL_TEXTURE_2D, self.texture);
-            shader.uniform('uSampler', 'uniform1i').value = 0;
+        
+          for (var i = 0; i < self.textures.length; i++) {
+            var descriptor = self.textures[i];
+            if (descriptor)
+            {
+              if (!descriptor.buffers[context.id])
+                buildTexture(self, context, descriptor);
+              
+              context.gl.activeTexture(GL_TEXTURES[i]);
+              descriptor.texture.bind(context);
+              shader.uniform("texture"+i, "uniform1i").value = i;
+              shader.setAttribute("texture"+i+"coords", descriptor.buffers[context.id]);
+            }
           }
+        
+          // bind the shader, apply the attributes, and draw the object.
           shader.bind(function() {
-            var enum = self.DRAW_MODE;
-            if (mode == WIREFRAME) enum = GL_LINE_STRIP;
+            var dmode = self.DRAW_MODE;
+            if (mode == WIREFRAME) dmode = GL_LINE_STRIP;
             
             if (indexBuffer)
             {
-              context.gl.drawElements(enum, indexBuffer.numItems, GL_UNSIGNED_SHORT, 0);
+              context.gl.drawElements(dmode, indexBuffer.numItems, GL_UNSIGNED_SHORT, 0);
               context.checkError();
             }
             else
             {
-              context.gl.drawArrays(enum, 0, vertexBuffer.numItems);
+              context.gl.drawArrays(dmode, 0, vertexBuffer.numItems);
               context.checkError();
             }
           });
@@ -186,11 +250,14 @@ var Renderable = function() {
         self.built[context.id] = false;
         disposeBuffer(self, 'GLVertexBuffer', context);
         disposeBuffer(self, 'GLColorBuffer', context);
-        disposeBuffer(self, 'GLTextureCoordsBuffer', context);
         disposeBuffer(self, 'GLIndexBuffer', context);
         disposeBuffer(self, 'GLNormalBuffer', context);
         self.originalTextureCoords = null;
         if (self.pickShader) { self.pickShader.dispose(); self.pickShader = false; }
+        for (var i = 0; i < self.textures.length; i++)
+          for (var bufname in self.textures[i].buffers)
+            if (self.textures[i].buffers[bufname])
+              self.textures[i].buffers[bufname].dispose();
       });
     },
     
@@ -225,57 +292,17 @@ var Renderable = function() {
           else ; // color isn't explicitly set, but color vertices exist, so use them.
         }
         
-        var buffer;
-        if (vertices.length > 0)
-        {
-          buffer = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-          buffer.itemSize = 3;
-          buffer.numItems = vertices.length / 3;
-          self.setGLVertexBuffer(context, buffer);
-        }
+        if (vertices.length > 0)      self.setGLVertexBuffer(new VertexBuffer(context, vertices));
+        if (colors.length > 0)        self.setGLColorBuffer(new ColorBuffer(context, colors));
+        if (indices.length > 0)       self.setGLIndexBuffer(new ElementArrayBuffer(context, indices));
+        if (normals.length > 0)       self.setGLNormalBuffer(new NormalBuffer(context, normals));
+        self.originalTextureCoords = textureCoords;
         
-        if (colors.length > 0)
-        {
-          buffer = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-          buffer.itemSize = 4;
-          buffer.numItems = colors.length / 4;
-          self.setGLColorBuffer(context, buffer);
-        }
-        
-        if (textureCoords.length > 0)
-        {
-          buffer = gl.createBuffer();
-          self.originalTextureCoords = textureCoords;
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-          buffer.itemSize = 2;
-          buffer.numItems = textureCoords.length / 2;
-          self.setGLTextureCoordsBuffer(context, buffer);
-        }
-        
-        if (indices.length > 0)
-        {
-          buffer = gl.createBuffer();
-          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STREAM_DRAW);
-          buffer.itemSize = 1;
-          buffer.numItems = indices.length;
-          self.setGLIndexBuffer(context, buffer);
-        }
-        
-        if (normals.length > 0)
-        {
-          buffer = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
-          buffer.itemSize = 3;
-          buffer.numItems = normals.length / 3;
-          self.setGLNormalBuffer(context, buffer);
-        }
+        // After the object has been built, we need to iterate through any textures that may have been registered
+        // with it, and rebuild those too.
+        for (var i = 0; i < self.textures.length; i++)
+          if (self.textures[i])
+            self.setTexture(i, self.textures[i].texture, self.textures[i]);
         
         var previousUpdate = new Date();
         if (self.updateInterval) clearInterval(self.updateInterval);

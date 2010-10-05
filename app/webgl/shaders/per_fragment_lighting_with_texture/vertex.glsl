@@ -1,6 +1,6 @@
 attribute vec3 aVertexPosition;
 attribute vec3 aVertexNormal;
-attribute vec2 aTextureCoord;
+attribute vec2 texture0coords;
 
 uniform mat4 mvMatrix;
 uniform mat4 pMatrix;
@@ -13,6 +13,6 @@ varying vec4 vPosition;
 void main(void) {
   vPosition = mvMatrix * vec4(aVertexPosition, 1.0);
   gl_Position = pMatrix * vPosition;
-  vTextureCoord = aTextureCoord;
+  vTextureCoord = texture0coords;
   vTransformedNormal = nMatrix * vec4(aVertexNormal, 1.0);
 }

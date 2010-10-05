@@ -1,6 +1,6 @@
 attribute vec3 aVertexPosition;
 attribute vec3 aVertexNormal;
-attribute vec2 aTextureCoord;
+attribute vec2 texture0coords;
 
 uniform mat4 mvMatrix;
 uniform mat4 pMatrix;
@@ -22,7 +22,7 @@ void main(void) {
   vec4 mvPosition = mvMatrix * vec4(aVertexPosition, 1.0);
   gl_Position = pMatrix * mvPosition;
   
-  vTextureCoord = aTextureCoord;
+  vTextureCoord = texture0coords;
 
   if (!uUseLighting) {
     vLightWeighting = vec3(1.0, 1.0, 1.0);

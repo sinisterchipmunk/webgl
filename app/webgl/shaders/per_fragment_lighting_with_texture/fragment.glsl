@@ -17,7 +17,7 @@ uniform vec3 uPointLightColor;
 uniform vec3 uLightingDirection;
 uniform vec3 uDirectionalColor;
 
-uniform sampler2D uSampler;
+uniform sampler2D texture0;
 
 void main(void) {
   vec3 lightWeighting;
@@ -44,7 +44,7 @@ void main(void) {
   vec4 fragmentColor;
   // useTextures is not yet implemented
   //if (uUseTextures) {
-    fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    fragmentColor = texture2D(texture0, vec2(vTextureCoord.s, vTextureCoord.t));
   //} else {
   //  fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
   //}
