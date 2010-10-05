@@ -15,17 +15,10 @@
                 Also takes an optional options argument, which may have magnitude and/or scale. These
                 default to the current magnitude and scale.
  */
-function HeightMap(gl, image, options)
-{
-  var self = this;
-  var vertexBuffer = null;
-  var colorBuffer = null;
-  var min_height, max_height;
-  var textureBuffers = [];
-  options = options || {};
-  
+var HeightMap = function() {
   // private helper function for iterating through all vertices (in the order they will be rendered)
-  function each_vertex(callback) {
+  function each_vertex(self, callback) {
+    var x, z;
     for (x = 0; x < self.width(); x += 1)
     {
       // in order to use triangle strips with a single buffer...
@@ -45,32 +38,79 @@ function HeightMap(gl, image, options)
       }
     }
   }
+  
+  function buildData(self)
+  {
+    logger.attempt("building height map", function() {
+      if (!self.image) throw new Error("No image data!");
+      var x;
+      self.data = {};
+      self.data.map = HeightMap.normalize(HeightMap.load(self.image));
+      self.data.width = self.image.width;
+      self.data.depth = self.image.height;
+  
+      for (x = 0; x < self.data.map.length; x++) {
+        var height = self.data.map[x] * self.magnitude;
+        self.data.lowest = self.data.lowest || height;
+        self.data.highest= self.data.highest|| height;
+        if (self.data.lowest > height)  self.data.lowest = height;
+        if (self.data.highest < height) self.data.highest = height;
+      }
+    });
+  }
+  
+  return Class.create(Renderable, {
+    initialize: function($super, image, options) {
+      options = options || {};
+    
+      this.image = image;
+      this.magnitude = options.magnitude || 1;
+      this.scale  = options.scale  || 1;
+      buildData(this); // force an immediate build of this.data
+    
+      $super();
+    },
+    
+    lowest:  function() { return this.data.lowest;  },
+    highest: function() { return this.data.highest; },
+    width:   function() { return this.data.width;   },
+    depth:   function() { return this.data.depth;   },
+    
+    height:  function(x, z) {
+      if (typeof(x) != "number" || typeof(z) != "number") { throw new Error("both x and z are required to calculate height"); }
+      return this.data.map[z * this.width() + x] * this.magnitude;
+    },
+    
+    init: function(vertices, colors, textureCoords, normals, indices) {
+      var y, self = this;
+      buildData(self); // because image data may have changed. TODO don't do this if image / options haven't changed
+      
+      self.DRAW_MODE = GL_TRIANGLE_STRIP;
+        
+      each_vertex(self, function(x, z) {
+        y = self.height(x, z);
+        vertices.push(x*self.scale, y, z*self.scale);
+        
+        y -= self.data.lowest;
+        y = (y / (self.data.highest - self.data.lowest) / 2) + 0.5;
+        colors.push(y, y, y, 1);
+        
+        textureCoords.push(x/self.width(), z/self.depth());
+      });
 
-  self.magnitude = options.magnitude || 1.0;
-  self.scale     = options.scale || 1.0;
-  self.gl        = gl;
-  
-  self.minHeight = function() { return min_height; };
-  self.maxHeight = function() { return max_height; };
-  self.width = function() { return image.width;  };
-  self.depth = function() { return image.height; };
-  self.height = function(x, z) {
-    if (typeof(x) != "number" || typeof(z) != "number") { throw("both x and z are required to calculate height"); }
-    return self.data[z * self.width() + x] * self.magnitude;
-  };
-  
-  self.release = function() {
-    self.gl.deleteBuffer(vertexBuffer);
-    self.gl.deleteBuffer(colorBuffer);
-    for (var i = 0; i < textureBuffers.length; i++) self.gl.deleteBuffer(textureBuffers[i]);
-    textureBuffers = [];
-  };
-  
-  /* valid options include: 
-      scale  - how many times this texture will be tiled over the object. Defaults to 1.
-      scaleX - just like scale, but is only applied horizontally.
-      scaleY - just like scale, but is only applied vertically.
-   */
+      assert_equal(vertices.length / 3, colors.length / 4);
+      assert_equal(vertices.length / 3, textureCoords.length / 2);
+    }
+  });
+}();
+
+/*
+function HeightMap(image, options)
+{
+  // valid options include: 
+  //    scale  - how many times this texture will be tiled over the object. Defaults to 1.
+  //    scaleX - just like scale, but is only applied horizontally.
+  //    scaleY - just like scale, but is only applied vertically.
   self.addTexture = function(texture, options)
   {
     options.scale = options.scale || 1;
@@ -94,87 +134,11 @@ function HeightMap(gl, image, options)
     self.gl.bufferData(self.gl.ARRAY_BUFFER, new Float32Array(textureData), gl.STATIC_DRAW);
   };
   
-  self.rebuild = function(new_image, options) {
-    if (vertexBuffer) self.release();
-    if (new_image) { image = new_image; self.data = HeightMap.normalize(HeightMap.load(image)); }
-    options = options || {};
-    self.magnitude = options.magnitude || self.magnitude;
-    self.scale     = options.scale || self.scale;
-        
-    var colors = [];
-    var vertices = [];
-    try {
-      var x, y, z, c;
 
-      min_height = max_height = null;
-      for (x = 0; x < self.data.length; x++)
-      {
-        min_height = min_height || self.data[x];
-        max_height = max_height || self.data[x];
-        if (min_height > self.data[x]*self.magnitude) min_height = self.data[x]*self.magnitude;
-        if (max_height < self.data[x]*self.magnitude) max_height = self.data[x]*self.magnitude;
-      }
-            
-      each_vertex(function(x, z) {
-        var y = self.height(x, z);
-        vertices.push(x*self.scale, y, z*self.scale);
-
-        y -= min_height;
-        y = (y / (max_height - min_height) / 2) + 0.5;
-        colors.push(y, y, y, 1);
-      })
-    } catch(e) { alert(e); throw(e); }
-    
-    vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    vertexBuffer.itemSize = 3;
-    vertexBuffer.numItems = vertices.length/3;
-    
-    colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-    colorBuffer.itemSize = 4;
-    colorBuffer.numItems = colors.length / 4;
-    
-    assert_equal(vertexBuffer.numItems, colorBuffer.numItems);
-  };
-  
-  // mode is an optional render mode such as FILL, WIREFRAME, etc. and defaults to FILL.
-  self.render = function(mode) {
-    var self = this;
-    var gl = self.gl;
-
-    mode = mode || FILL;
-
-    var shader;
-    if (textureBuffers.length > 0)
-    {
-      shader = shaders['color_with_texture'];
-      for (var i = 0; i < textureBuffers.length && i < 32; i++) // 32 is max supported by GL
-      {
-        shader.setAttribute('aTextureCoord', textureBuffers[i]);
-        gl.activeTexture(eval("gl.TEXTURE"+i));  
-        gl.bindTexture(gl.TEXTURE_2D, textureBuffers[i].texture);
-        shader.uniform("textures[0]", "uniform1i").value = i;
-      }
-    }
-    else
-      shader = shaders['color_without_texture'];
-
-    shader.setAttribute('aVertexPosition', vertexBuffer);
-    shader.setAttribute('aVertexColor', colorBuffer);
-
-    shader.bind(function() {
-      if (mode == FILL)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexBuffer.numItems);
-      else if (mode == WIREFRAME)
-        gl.drawArrays(gl.LINE_STRIP, 0, vertexBuffer.numItems);
-    });
-  };
   
   self.rebuild(image);
 }
+*/
 
 HeightMap.normalize = function(map)
 {
@@ -220,7 +184,7 @@ HeightMap.context = function()
 HeightMap.load = function(image)
 {
   var canvas = HeightMap.canvas();
-  canvas.width = image.width;
+  canvas.width  = image.width;
   canvas.height = image.height;
   var context = HeightMap.context();
   context.drawImage(image, 0, 0);

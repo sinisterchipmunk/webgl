@@ -21,6 +21,10 @@ class WebGL::Shader
     find_source_file("vertex")
   end
   
+  def to_json(*a)
+    "new Shader({vertex_source:#{vertex_source.to_json}, fragment_source:#{fragment_source.to_json}})"
+  end
+  
   private
   def local_filename(which)
     File.join("shaders", @name, "#{which}.glsl")

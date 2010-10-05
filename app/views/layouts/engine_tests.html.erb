@@ -12,59 +12,39 @@
   <script type="text/javascript" src="/javascripts/gl-utils.js"></script>
   <script type="text/javascript" src="/javascripts/webgl.js"></script>
   <script type="text/javascript" src="/javascripts/engine/core.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/assertions.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/vector.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/camera.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/shader.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/world.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/context.js"></script>
+  <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
   <%dependencies.each do |fi| %>
     <%=javascript_include_tag fi%>
   <%end%>
   
   <script type="text/javascript">
+    var context = null;
+    var gl = null;
     var frame_count = 0;
+    var world;
     
-    function logErrors(name, func) {
-      try {
-        func();
-      } catch(e) { logger.error("Error during '"+name+"': "+e+"\n\n"+e.stack); throw e; }
-    }
-  
     <%=yield :global%>
     
-    function initShaders() {
-      logErrors('initShaders', function() {
-        var shader;
-        <%shaders.values.each do |shader|%>
-          shader = new Shader();
-          shader.vertex.source   = <%=shader.vertex_source.to_json.html_safe%>;
-          shader.fragment.source = <%=shader.fragment_source.to_json.html_safe%>;
-          shaders[<%=shader.name.to_json.html_safe%>] = shader;    
-        <%end%>
-      });
-    }
-  
     function drawScene() {
-      logErrors("drawScene", function() {
-        if (drawScene.blocking) return;
-        try {
-          activeShader = null; // Shader seems to be lost between passes - TODO see if this is WebGL's fault or mine!
-          useShader('color_without_texture');
-        
-          frame_count += 1;
-  
-          gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        
-          perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
-          loadIdentity();
-    
-          <%=yield :render%>
-          checkGLError();
-        } catch(e) {
-          drawScene.blocking = true;
-          throw e;
-        }
-      });
+      frame_count += 1;
+
+      <%=yield :render%>
+      context.checkError();
     }
   
     function webGLStart() {
-      logErrors("webGLStart", function() {
+      logger.attempt("webGLStart", function() {
+        context = new WebGLContext('canvas', <%=shaders.to_json%>);
+        gl = context.gl;
+        world = context.world;
+        context.render = drawScene;
+
         logger.level = Logger.DEBUG;
         if ($('logger')) $('logger').update(logger);
         
@@ -77,22 +57,11 @@
         canvas.onmousedown = mouse_down;
         canvas.onmouseup   = mouse_up;
         
-        initGL(canvas);
-        initShaders();
         initializationComplete();
-    
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.clearDepth(1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LEQUAL);
-        
-        checkGLError();
-        
+        context.checkError();
         <%=yield :init%>
-        checkGLError();
+        context.checkError();
         
-          
-        setInterval(drawScene, 15);
         setInterval(calcFramerate, 1000);
       });
     }
@@ -103,14 +72,14 @@
     }
             
     function canvas_clicked(event) {
-      logErrors("canvas_clicked", function() {
+      logger.attempt("canvas_clicked", function() {
         <%=yield :canvas_clicked%>
       });
     }
           
     function mouse_moved(event) {
       var self = this;
-      logErrors("mouse_moved", function() {
+      logger.attempt("mouse_moved", function() {
         // FIXME doesn't account for scroll offsets
         mouse.overCanvas = true;
         mouse.offsetx = mouse.x;
@@ -133,19 +102,19 @@
     }
           
     function mouse_over(event) {
-      logErrors("mouse_over", function() {
+      logger.attempt("mouse_over", function() {
         <%=yield :mouse_over%>
       });
     }
           
     function mouse_out(event) {
-      logErrors("mouse_out", function() {
+      logger.attempt("mouse_out", function() {
         <%=yield :mouse_out%>
       });
     }
           
     function mouse_down(event) {
-      logErrors("mouse_down", function() {
+      logger.attempt("mouse_down", function() {
         var button = event.which;
         
         mouse.down = mouse.down || {count:0,down:{}};
@@ -156,7 +125,7 @@
     }
           
     function mouse_up(event) {
-      logErrors("mouse_up", function() {
+      logger.attempt("mouse_up", function() {
         if (mouse.down)
         {
           mouse.down.count--;

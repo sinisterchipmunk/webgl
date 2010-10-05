@@ -5,26 +5,27 @@
   <%end%>
   
   <%content_for :init do%>
-    height_map = new HeightMap(gl, document.getElementById('heightmap'));
-    height_map.magnitude = 5;
-    height_map.rebuild();
-  
-    camera.translateTo(25,55,70);
-    camera.lookAt(25,0,35);
-  <%end%>
-  
-  <%content_for :render do%>
-    camera.look(gl);
-    height_map.render(WIREFRAME);
+    height_map = new HeightMap(document.getElementById('heightmap'), {magnitude:5});
+
+    world.camera.translateTo(25, 55, 70);
+    world.camera.lookAt(25, 0, 35);
+    context.world.addObject(height_map);
   <%end%>
   
   <%content_for :canvas_clicked do%>
     var img = new Image();
     img.onload = function() {
       document.getElementById('heightmap').src = img.src;
-      height_map.rebuild(img, {scale:0.75});
+      height_map.image = img;
+      height_map.scale = 0.75;
+      height_map.invalidate();
     };
     img.src = '/images/colloquy.png';
+  <%end%>
+        
+  <%content_for :render do %>
+    context.world.camera.look(context.gl);
+    context.world.render(WIREFRAME);
   <%end%>
 </script>
 

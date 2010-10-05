@@ -1,4 +1,5 @@
 class EngineTestsController < ApplicationController
+  layout :choose_layout
   helper_method :dependencies, :shaders, :objects
   before_filter :add_all_shaders
   
@@ -48,14 +49,22 @@ class EngineTestsController < ApplicationController
   end
   
   def renderable
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable" << "tests/engine/renderable"
   end
   
   def particles
     dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d' << 'systems/particle_generator'
   end
   
+  def multi_canvas
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+  end
+  
   private
+  def choose_layout
+    params[:action] == "bvh_editor" ? nil : "engine_tests"
+  end
+  
   def dependencies
     @dependencies ||= []
   end
@@ -65,7 +74,13 @@ class EngineTestsController < ApplicationController
   end
   
   def shaders
-    @shaders ||= {}
+    @shaders ||= begin
+      hash = {}
+      def hash.to_json(*a)
+        ("{"+collect { |(key, shader)| key.to_json + ": "+shader.to_json }.join(",")+"}").html_safe
+      end
+      hash
+    end
   end
   
   def add_all_shaders

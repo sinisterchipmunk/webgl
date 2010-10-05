@@ -1,12 +1,12 @@
 <script>
   <%content_for :global do%>
-    var world = new World();
+//    var world = new World();
     var teapot = null;
     var texture = null;
   <%end%>
           
   <%content_for :init do%>
-    JSON3D.load("/3d/teapot.json", function(obj) { teapot = obj; });
+    JSON3D.load("/3d/teapot.json", function(obj) { world.addObject(teapot = obj); });
 
     var img = new Image();
     img.onload = function() {
@@ -27,12 +27,11 @@
     if (teapot) {
       if (texture && $('use-texture').checked) {
         teapot.texture = texture;
-        teapot.shader = shaders['color_with_texture'];
+        teapot.shader = 'color_with_texture';
       }
-      else teapot.shader = shaders['color_without_texture'];
+      else teapot.shader = 'color_without_texture';
       
-      world.camera.look(gl);
-      teapot.render();
+      world.render();
     }
   <%end%>
         

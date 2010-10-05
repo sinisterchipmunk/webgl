@@ -6,7 +6,6 @@
 <%content_for :global do%>
   var quad = new Quad(1,1);
   var sphere = new Sphere(1);
-  var world = new World();
   var mouse = {overCanvas:false,x:0,y:0};
   var selectedObject = null;
   var highlightShader = new Shader();
@@ -40,6 +39,7 @@
                                     "void main(void) {\n" +
                                     "  gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);\n" +
                                     "}";
+  highlightShader.context = context;
   
   update_debug();
   world.addObject(quad);
@@ -50,7 +50,6 @@
 <%end%>
 
 <%content_for :render do%>
-  useShader(shaders['color_without_texture']);
   if (selectedObject) selectedObject.shader = null;
   selectedObject = world.pick(mouse.x, mouse.y);
   if (selectedObject) selectedObject.shader = highlightShader;

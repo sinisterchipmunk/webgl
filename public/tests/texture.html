@@ -96,7 +96,7 @@
       setMatrixUniforms();
 
       quad.render();
-      checkGLError();
+      context.checkError();
     }
        
     function webGLStart() {
@@ -104,10 +104,10 @@
       initGL(canvas);
       initShaders();
       initTextures();
-      checkGLError();
+      context.checkError();
 
       initializationComplete();
-      checkGLError();
+      context.checkError();
   
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);

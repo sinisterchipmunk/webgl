@@ -4,8 +4,6 @@
 
 <script>
 <%content_for :global do%>
-  require("objects/renderable");
-
   var colorBuffer, vertexBuffer;
   var camera = new Camera();
   var tri = new Renderable(function(vertices, colors) {
@@ -50,7 +48,7 @@
   camera.translateTo(0,0,5);
   camera.lookAt(0,0,0);
   setInterval(updateKeyboardInput, 15);
-  tri.shader = shaders['color_without_texture'];
+  tri.shader = 'color_without_texture';
 <%end%>
 
 <%content_for :render do%>
@@ -66,7 +64,7 @@
                       "Magnitude: "+pos.magnitude();
   } catch(e) { alert(e+"\n\n"+e.stack); }
 
-  tri.render();
+  tri.render(context);
 <%end%>
 </script>
 

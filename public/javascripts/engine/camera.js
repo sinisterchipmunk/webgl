@@ -72,7 +72,6 @@ function Camera(options)
   self.lookGL = function(gl) {
     setMatrix(matrix);
     pmatrix = makePerspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
-    setMatrixUniforms();
   };
   
   /* Explicitly sets this Camera's orientation. This is a dangerous function, because it does NOT do any

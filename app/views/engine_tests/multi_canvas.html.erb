@@ -1,0 +1,41 @@
+<%content_for :style do%>
+  .titlebar { text-align:center; background-color: #00a; color: #fff; font-weight:800; font-family:sans-serif; }
+  .canvas-left {  width:250px;height:275px; border:1px solid #ccc; float:left; }
+  .canvas-center#main { float:left; width:300px;height:552px;border:1px solid #ccc; }
+  #canvas { display: none; }
+<%end%>
+
+<script>
+  <%content_for :global do%>
+    var contexts = [];
+  <%end%>
+        
+  <%content_for :init do%>
+    contexts[0] = new WebGLContext('canvas0', <%=shaders.to_json%>);
+    contexts[1] = new WebGLContext('canvas1', <%=shaders.to_json%>);
+          
+    var quad = new Quad(1,1);
+    quad.update = function(timechange) { this.orientation.rotateView(0, timechange * 4, 0); };
+
+    contexts[0].world.camera.translateTo(0,0,10);
+    contexts[0].world.addObject(quad);
+    contexts[1].world.camera.translateTo(10,0,0);
+    contexts[1].world.camera.lookAt(0,0,0);
+    contexts[1].world.addObject(quad);
+  <%end%>
+</script>
+
+<div style="float:left;">
+  <div class="canvas-left">
+    <div class="titlebar">
+      Front (-) &rarr; Back (+)
+    </div>
+    <canvas id="canvas0" width="250" height="250"></canvas>
+  </div>
+  <div class="canvas-left">
+    <div class="titlebar">
+      Left (-) &rarr; Right (+)
+    </div>
+    <canvas id="canvas1" width="250" height="250"></canvas>
+  </div>
+</div>

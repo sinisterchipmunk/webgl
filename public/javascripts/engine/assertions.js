@@ -1,11 +1,12 @@
 function assert(cond, msg)
 {
-  try {
+//  try {
     if (!cond) { throw new Error(msg || "Assertion failed!"); }
-  }
-  catch (e) {
-    logger.error(e+"\n\n"+e.stack);
-  }
+//  }
+//  catch (e) {
+//    logger.error(e+"\n\n"+e.stack);
+//    throw e;
+//  }
 }
 
 function assert_not_equal(not_expected, actual, message)

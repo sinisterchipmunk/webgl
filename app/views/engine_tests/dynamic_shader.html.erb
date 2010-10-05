@@ -5,6 +5,7 @@
 <script>
 <%content_for :global do%>
   var shader = new Shader();
+  shader.context = context;
   var quad = new Quad(1,1);
 
   shader.fragment.source = "#ifdef GL_ES\n" +
@@ -26,14 +27,11 @@
 
   shader.uniforms('uMVMatrix', 'uniformMatrix4fv').value = function() { return new Float32Array(mvMatrix.flatten()); };
   shader.uniforms('uPMatrix',  'uniformMatrix4fv').value = function() { return new Float32Array(pMatrix.flatten());  };
-//  shader.addUniform('uMVMatrix');
-//  shader.addUniform('uPMatrix');
-//
-//  shader.setUMVMatrix('uniformMatrix4fv', function() { return new Float32Array(mvMatrix.flatten()); });
-//  shader.setUPMatrix( 'uniformMatrix4fv', function() { return new Float32Array(pMatrix.flatten());  });
 <%end%>
 
 <%content_for :init do%>
+  shader.context = context;
+
   // we COULD do this, but the shader should compile itself as needed when its program is used, as well.
   //  shader.compile();
 <%end%>
@@ -42,7 +40,7 @@
   mvTranslate(0,0,-5);
 
   quad.shader = shader;
-  quad.render();
+  quad.render(shader.context);
 <%end%>
 </script>
 

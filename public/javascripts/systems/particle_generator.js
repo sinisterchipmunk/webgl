@@ -14,13 +14,11 @@ var ParticleGenerator = function() {
     for (i = 0; i < 3; i++)
       position[i] += variance(self.options.posVariance[i]);
     
-    //particle.shader = shaders['color_without_texture']
     particle.size = size;
     particle.orientation.translateTo(position);
     particle.endSize = endSize;
     particle.lifespan = self.options.lifespan + variance(self.options.lifespanVariance);
     particle.destVariance = [];
-    //particle.speed =   //self.options.speed + variance(self.options.speedVariance);
     for (i = 0; i < 3; i++)
       particle.destVariance[i] = variance(self.options.destVariance[i]);
     
@@ -29,9 +27,12 @@ var ParticleGenerator = function() {
   
   return Class.create(Renderable, {
     initialize: function($super, options) {
-      this.setOptions(options);
-      this.particles = [];
-      $super();
+      var self = this;
+      logger.attempt("create ParticleGenerator", function() {
+        self.setOptions(options);
+        self.particles = [];
+        $super();
+      });
     },
     
     update: function(timechange) {
@@ -67,10 +68,11 @@ var ParticleGenerator = function() {
         this.particles.push(generate(this));
     },
     
-    render: function() {
+    render: function(context, mode) {
+      if (!this.isBuiltFor(context)) { this.rebuild(context); }
       for (var i = 0; i < this.particles.length; i++)
         if (this.particles[i])
-          this.particles[i].render();
+          this.particles[i].render(context, mode);
     },
     
     setOptions: function(options) {

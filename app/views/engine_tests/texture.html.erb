@@ -12,7 +12,7 @@
       gl.bindTexture(gl.TEXTURE_2D, null);
         
       quad.texture = texture;
-      quad.shader = shaders['color_with_texture'];
+      quad.shader = context.shaders['color_with_texture'];
     } catch(e) { alert(e+"\n\n"+e.stack); }
   }
 <%end%>
@@ -26,14 +26,14 @@
   };
   img.src = "/images/textures/poormansgrass.png";  
 
-  quad.shader = shaders['color_without_texture'];
+  quad.shader = context.shaders['color_without_texture'];
   camera.translateTo(0,0,5);
   camera.lookAt(0,0,0);
 <%end%>
 
 <%content_for :render do%>
   camera.look(gl);
-  quad.render();
+  quad.render(context);
 <%end%></script>
 
 <p>This demo very simply shows the binding of textures. When it is first loaded, no texture is bound and the

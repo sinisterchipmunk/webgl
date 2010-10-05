@@ -1,87 +1,15 @@
 var mvMatrixStack = [];
 var mvMatrix;
 var pMatrix;
-var gl;
 var currentlyPressedKeys = Object();
-var activeShaderName = null;
-var activeShader = null;
 
-function initGL(canvas) {
-  document.onkeydown = handleKeyDown;
-  document.onkeyup = handleKeyUp;
-  
-  try {
-    gl = canvas.getContext("experimental-webgl");
-    gl.canvas = canvas;
-    gl.viewportWidth = canvas.width;
-    gl.viewportHeight = canvas.height;
-  } catch(e) {
-  }
-  if (!gl) {
-    alert("Could not initialise WebGL, sorry :-(");
-  }
-  checkGLError();
-}
-
-function checkGLError()
-{
-  var error = gl.getError();
-  if (error != gl.NO_ERROR)
-  {
-    var str = "GL error: "+error;
-    var err = new Error(str);
-    var stack = err.stack.split("\n");
-    stack.shift();
-    var message = err+"\n\n"+stack.join("\n");
-    if (logger) logger.error(message);
-    else alert(message);
-    throw err;
-  }
-}
-
-function handleKeyDown(event) {
+document.onkeydown = function(event) {
   currentlyPressedKeys[event.keyCode] = true;
-}
+};
 
-
-function handleKeyUp(event) {
+document.onkeyup = function(event) {
   currentlyPressedKeys[event.keyCode] = false;
-}
-
-function getShader(gl, id) {
-  var shaderScript = document.getElementById(id);
-  if (!shaderScript) {
-    return null;
-  }
-
-  var str = "";
-  var k = shaderScript.firstChild;
-  while (k) {
-    if (k.nodeType == 3) {
-      str += k.textContent;
-    }
-    k = k.nextSibling;
-  }
-
-  var shader;
-  if (shaderScript.type == "x-shader/x-fragment") {
-    shader = gl.createShader(gl.FRAGMENT_SHADER);
-  } else if (shaderScript.type == "x-shader/x-vertex") {
-    shader = gl.createShader(gl.VERTEX_SHADER);
-  } else {
-    return null;
-  }
-
-  gl.shaderSource(shader, str);
-  gl.compileShader(shader);
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    alert(gl.getShaderInfoLog(shader));
-    return null;
-  }
-
-  return shader;
-}
+};
 
 function loadIdentity() {
   mvMatrix = Matrix.I(4);
@@ -103,62 +31,6 @@ function setMatrix(m) {
 
 function perspective(fovy, aspect, znear, zfar) {
   pMatrix = makePerspective(fovy, aspect, znear, zfar);
-}
-
-function setMatrixUniforms() {
-  if (!activeShader) useShader(activeShaderName);
-
-  //if (activeShader.pMatrixUniform)
-  {
-    gl.uniformMatrix4fv(activeShader.pMatrixUniform, false, new Float32Array(pMatrix.flatten()));
-    checkGLError();
-  }
-
-  //if (activeShader.mvMatrixUniform)
-  {
-    gl.uniformMatrix4fv(activeShader.mvMatrixUniform, false, new Float32Array(mvMatrix.flatten()));
-    checkGLError();
-  }
-}
-
-function useShader(name) {
-  if (name.getCompiledProgram) name = name.getCompiledProgram();
-  if ((name != activeShaderName && name != activeShader) || !activeShader)
-  {
-    checkGLError();
-    disableShaderAttribs();
-    if (typeof(name) == "string")
-    {
-      if (shaders[name] == null) throw new Error("Shader named '"+name+"' was not found");
-      activeShaderName = name;
-      activeShader = shaders[name];
-      gl.useProgram(activeShader);
-      checkGLError();
-    }
-    else
-    {
-      activeShaderName = null;
-      activeShader = name;
-      gl.useProgram(name);
-      checkGLError();
-    }
-    
-    enableShaderAttribs();
-  }
-  return activeShader;
-}
-
-function enableShaderAttribs()
-{
-  if (activeShader && activeShader.attributes)
-    for (var i = 0; i < activeShader.attributes.length; i++)
-      gl.enableVertexAttribArray(activeShader[activeShader.attributes[i]]);
-  checkGLError();
-}
-
-function disableShaderAttribs()
-{
-  disableAllAttributes();
 }
 
 function mvPushMatrix(m) {

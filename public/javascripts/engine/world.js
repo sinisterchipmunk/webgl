@@ -1,55 +1,56 @@
-function World()
+function World(context)
 {
   var self = this;
-  self.objects = [];
+  self.objects = {};
   self.camera = new Camera();
+  self.context = context;
   
   /* buffers for picking */
-  after_initialize(function(gl) {
-    self.framePickBuffer = gl.createFramebuffer();
-    self.renderPickBuffer = gl.createRenderbuffer();
-    self.pickTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, self.pickTexture);
+  after_initialize(function() {
+    self.framePickBuffer = self.context.gl.createFramebuffer();
+    self.renderPickBuffer = self.context.gl.createRenderbuffer();
+    self.pickTexture = self.context.gl.createTexture();
+    self.context.gl.bindTexture(self.context.gl.TEXTURE_2D, self.pickTexture);
 
     //TODO update when null is accepted
     try {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+        self.context.gl.texImage2D(self.context.gl.TEXTURE_2D, 0, self.context.gl.RGB, 1, 1, 0, self.context.gl.RGB, self.context.gl.UNSIGNED_BYTE, null);
     } catch (e) {
         var tex = new Uint8Array(3);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, tex);
+        self.context.gl.texImage2D(self.context.gl.TEXTURE_2D, 0, self.context.gl.RGB, 1, 1, 0, self.context.gl.RGB, self.context.gl.UNSIGNED_BYTE, tex);
     }
     
-    gl.bindFramebuffer(gl.FRAMEBUFFER, self.framePickBuffer);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, self.renderPickBuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT, 1, 1);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    self.context.gl.bindFramebuffer(self.context.gl.FRAMEBUFFER, self.framePickBuffer);
+    self.context.gl.bindRenderbuffer(self.context.gl.RENDERBUFFER, self.renderPickBuffer);
+    self.context.gl.renderbufferStorage(self.context.gl.RENDERBUFFER, self.context.gl.DEPTH_COMPONENT, 1, 1);
+    self.context.gl.bindRenderbuffer(self.context.gl.RENDERBUFFER, null);
     
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.pickTexture, 0);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.renderPickBuffer);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    self.context.gl.framebufferTexture2D(self.context.gl.FRAMEBUFFER, self.context.gl.COLOR_ATTACHMENT0, self.context.gl.TEXTURE_2D, self.pickTexture, 0);
+    self.context.gl.framebufferRenderbuffer(self.context.gl.FRAMEBUFFER, self.context.gl.DEPTH_ATTACHMENT, self.context.gl.RENDERBUFFER, self.renderPickBuffer);
+    self.context.gl.bindFramebuffer(self.context.gl.FRAMEBUFFER, null);
   });
 }
 
 World.prototype = {
   render: function(mode) {
     mvPushMatrix();
-      this.camera.look(gl);
+      this.camera.look(this.context.gl);
       this.renderObjects(mode);
     mvPopMatrix();
   },
   
   renderObjects: function(mode) {
-    for (var i = 0; i < this.objects.length; i++)
-      this.objects[i].render(mode);
+    for (var i in this.objects)
+      this.objects[i].render(this.context, mode);
   },
   
   addObject: function(object) {
-    object.rebuildPickShader(this.objects.length);
-    this.objects.push(object);
+    this.objects[object.object_id] = object;
   },
   
   pick: function(x, y) {
     var debug = $("debug");
+    var self = this;
     
     // compensate for firefox; TODO see if this is necessary for chrome / safari
     x -= 2;
@@ -61,8 +62,8 @@ World.prototype = {
     if (!cpMatrix || !cmvMatrix) return null;
     
     //get eye space coords
-    xcoord =  -( ( ( 2 * x ) / gl.viewportWidth ) - 1 ) / cpMatrix.e(1,1);
-    ycoord =   ( ( ( 2 * y ) / gl.viewportHeight) - 1 ) / cpMatrix.e(2,2);
+    xcoord =  -( ( ( 2 * x ) / self.context.gl.viewportWidth ) - 1 ) / cpMatrix.e(1,1);
+    ycoord =   ( ( ( 2 * y ) / self.context.gl.viewportHeight) - 1 ) / cpMatrix.e(2,2);
     zcoord =  1;
     
     var coord=$V([xcoord,ycoord,zcoord,0]);
@@ -80,36 +81,36 @@ World.prototype = {
                  [0, 0, 0, 1]]).inverse();
     pMatrix=makeOrtho(-0.0001,0.0001,-0.0001,0.0001,near,far);
     //render for picking
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framePickBuffer);
-    gl.viewport(0,0,gl.viewportWidth,gl.viewportHeight);
-    //gl.viewport(0,0,gl.viewportWidth,gl.viewportHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.disable(gl.BLEND);
+    self.context.gl.bindFramebuffer(self.context.gl.FRAMEBUFFER, this.framePickBuffer);
+    self.context.gl.viewport(0,0,self.context.gl.viewportWidth,self.context.gl.viewportHeight);
+    //self.context.gl.viewport(0,0,self.context.gl.viewportWidth,self.context.gl.viewportHeight);
+    self.context.gl.clear(self.context.gl.COLOR_BUFFER_BIT | self.context.gl.DEPTH_BUFFER_BIT);
+    self.context.gl.disable(self.context.gl.BLEND);
 
     //setMatrixUniforms();
     this.renderObjects(RENDER_PICK);
 
     var data;               // 0, 0, w, h
-    try { data = gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE); }
+    try { data = self.context.gl.readPixels(0, 0, 1, 1, self.context.gl.RGBA, self.context.gl.UNSIGNED_BYTE); }
     catch(e) { }               //x-2, y+2
     if (!data) {
       data = new Uint8Array(4); // w * h * 4
-      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      self.context.gl.readPixels(0, 0, 1, 1, self.context.gl.RGBA, self.context.gl.UNSIGNED_BYTE, data);
     }
     if(data.data) data=data.data;
     
     if (debug) debug.update(debug.innerHTML+"<br/>"+
                         "mask data: ["+data[0]+","+data[1]+","+data[2]+"]<br/>"+
-                        "viewport size: "+gl.viewportWidth+"x"+gl.viewportHeight);
+                        "viewport size: "+self.context.gl.viewportWidth+"x"+self.context.gl.viewportHeight);
     var index = decodeFromColor(data);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0,0,gl.viewportWidth,gl.viewportHeight);
+    self.context.gl.bindFramebuffer(self.context.gl.FRAMEBUFFER, null);
+    self.context.gl.viewport(0,0,self.context.gl.viewportWidth,self.context.gl.viewportHeight);
 
     //revert the view matrix
     mvMatrix=origmatrix;	
     pMatrix=origpmatrix;
-    gl.enable(gl.BLEND);
-      checkGLError();
+    self.context.gl.enable(self.context.gl.BLEND);
+      self.context.checkError();
     
     if (data[2] > 0) // check the 'blue' key
     {

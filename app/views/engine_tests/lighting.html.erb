@@ -1,39 +1,39 @@
 <script>
 <%content_for :global do%>
   var camera = new Camera();
-  var shader = new Shader();
   var sphere = new Sphere(1);
   var sphere2 = new Sphere(1);
 <%end%>
 
 <%content_for :init do%>
-  camera.translateTo(0,0,6);
+  world.camera.translateTo(0,0,6);
+  world.addObject(sphere);
+  world.addObject(sphere2);
 
   sphere.orientation.translateTo(2,0,0);
   sphere2.orientation.translateTo(-2,0,3);
 
-  shader.vertex.source   = <%=shaders['per_fragment_lighting_with_texture'].vertex_source.to_json.html_safe%>;
-  shader.fragment.source = <%=shaders['per_fragment_lighting_with_texture'].fragment_source.to_json.html_safe%>;
-
-  sphere.shader = shader;
-  sphere2.shader = shader;
+  sphere.shader = 'per_fragment_lighting_with_texture';
+  sphere2.shader = 'per_fragment_lighting_with_texture';
   
   drawScene.blocking = true;
 
   var img = new Image();
   img.onload = function() {
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);  
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-    gl.generateMipmap(gl.TEXTURE_2D);  
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    logger.attempt("textures", function() {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);  
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
+      gl.generateMipmap(gl.TEXTURE_2D);  
+      gl.bindTexture(gl.TEXTURE_2D, null);
     
-    sphere.texture = texture;
-    sphere2.texture = texture;
+      sphere.texture = texture;
+      sphere2.texture = texture;
     
-    drawScene.blocking = false;
+      drawScene.blocking = false;
+    });
   };
   img.src = "/images/textures/poormansgrass.png";
 
@@ -43,6 +43,7 @@
   var pointLocation = [-2, 0, 0];
   var pointColor = [1, 0, 0];
 
+  var shader = context.shaders['per_fragment_lighting_with_texture'];
   shader.uniform('uAmbientColor', 'uniform3fv').value = function() {
     var ndir = [parseFloat($('ambient-r').value),
                 parseFloat($('ambient-g').value),
@@ -113,9 +114,7 @@
 <%end%>
 
 <%content_for :render do%>
-  camera.look(gl);
-  sphere.render();
-  sphere2.render();
+  world.render();
 <%end%>
 </script>
 

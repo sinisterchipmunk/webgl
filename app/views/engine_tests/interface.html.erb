@@ -1,7 +1,5 @@
 <script>
 <%content_for :global do %>
-  var colorBuffer, vertexBuffer;
-  var camera = new Camera({lock_y_axis:true});
   var heightMap;
 
   function initTextures() {  
@@ -12,16 +10,16 @@
   }  
       
   function handleTextureLoaded(image, texture) {
-    try {
+    logger.attempt("add texture", function() {
       gl.bindTexture(gl.TEXTURE_2D, texture);  
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
       gl.generateMipmap(gl.TEXTURE_2D);  
       gl.bindTexture(gl.TEXTURE_2D, null);
-        
+      
       heightMap.addTexture(texture, {scale:3});
-    } catch(e) { alert(e+"\n\n"+e.stack); }
+    });
   }  
     
   function updateKeyboardInput()
@@ -45,7 +43,7 @@
     if (currentlyPressedKeys[65]) translation[0] -= 1; // A
     if (currentlyPressedKeys[68]) translation[0] += 1; // D
       
-    camera.move(movement_speed, translation);
+    world.camera.move(movement_speed, translation);
     //camera.rotateView(rotation[0], rotation[1], 0);
   }
 <%end%>
@@ -53,23 +51,25 @@
 <%content_for :init do%>
   var img = new Image();
   img.onload = function() {
-    heightMap = new HeightMap(gl, img, {magnitude:4});
-    checkGLError();
+    heightMap = new HeightMap(img, {magnitude:4});
+    world.addObject(heightMap);
+    context.checkError();
     initTextures();
-    checkGLError();
+    context.checkError();
   };
   img.src = "/images/height.png";
 
-  camera.moveTo(35, 75, 42);
-  camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
+  world.camera.moveTo(35, 75, 42);
+  world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
       
   setInterval(updateKeyboardInput, 15);
 <%end%>
 
 <%content_for :render do%>
   if (!heightMap) return;
-  camera.look(gl);
-  
-  heightMap.render();
+  world.render();
+//  camera.look(gl);
+//  
+//  heightMap.render();
 <%end%>
 </script>

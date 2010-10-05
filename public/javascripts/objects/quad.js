@@ -1,12 +1,10 @@
-require("objects/renderable");
-
 var Quad = Class.create(Renderable, {
   initialize: function($super, width, height) {
     var self = this;
     $super(
       // init
       function(vertices, colors, textureCoords) {
-        self.DRAW_MODE = gl.TRIANGLE_STRIP;
+        self.DRAW_MODE = GL_TRIANGLE_STRIP;
         
         vertices.push(-width/2, -height/2, 0);
         vertices.push(-width/2,  height/2, 0);

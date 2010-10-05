@@ -1,16 +1,10 @@
 <script>
-  <%objects.each do |object|%>
-    world.addObject(<%=object.to_js%>);
-  <%end%>
-  
-  <%content_for :global do%>
-    var world = new World();
-  <%end%>
-          
   <%content_for :init do%>
-    useShader(shaders['color_without_texture']);
     logger.level = Logger.DEBUG;
   
+    <%objects.each do |object|%>
+      world.addObject(<%=object.to_js%>);
+    <%end%>
   
     // TODO make all this stuff doable from ruby
   
