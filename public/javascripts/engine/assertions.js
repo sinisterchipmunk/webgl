@@ -36,3 +36,13 @@ function assert_defined(obj, msg)
 {
   assert(obj, msg || "Expected value to be defined");
 }
+
+function assert_null(obj, msg)
+{
+  assert_equal(null, obj, msg || "Expected <"+obj.toString()+"> to be null");
+}
+
+function assert_not_null(obj, msg)
+{
+  assert_not_equal(null, obj, msg || "Expected to not be null");
+}

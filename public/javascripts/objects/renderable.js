@@ -138,8 +138,7 @@ var Renderable = function() {
       else return (this.buffers[context.id] = {})[name];
     },
     
-    setGLBuffer: function(name, buf) {
-      var context = buf.context;
+    setGLBuffer: function(context, name, buf) {
       if (!context) throw new Error("No context given!");
       if (!name) throw new Error("No name given!");
       if (typeof(buf) == "undefined") throw new Error("No buffer given!");
@@ -152,10 +151,10 @@ var Renderable = function() {
     getGLIndexBuffer:         function(context) { return this.getGLBuffer(context, 'indices');       },
     getGLNormalBuffer:        function(context) { return this.getGLBuffer(context, 'normals');       },
     
-    setGLVertexBuffer:        function(buf) { this.setGLBuffer('vertices',      buf); },
-    setGLColorBuffer:         function(buf) { this.setGLBuffer('colors',        buf); },
-    setGLIndexBuffer:         function(buf) { this.setGLBuffer('indices',       buf); },
-    setGLNormalBuffer:        function(buf) { this.setGLBuffer('normals',       buf); },
+    setGLVertexBuffer:        function(context, buf) { this.setGLBuffer(context, 'vertices',      buf); },
+    setGLColorBuffer:         function(context, buf) { this.setGLBuffer(context, 'colors',        buf); },
+    setGLIndexBuffer:         function(context, buf) { this.setGLBuffer(context, 'indices',       buf); },
+    setGLNormalBuffer:        function(context, buf) { this.setGLBuffer(context, 'normals',       buf); },
     
     rebuildPickShader: function(context, index) {
       if (!context) throw new Error("No context given!");
@@ -272,9 +271,10 @@ var Renderable = function() {
     rebuild: function(context) {
       var self = this;
       logger.attempt("Renderable#rebuild", function() {
+        if (!context) throw new Error("Can't render without a context!");
         self.dispose(context);
         var gl = context.gl;
-        self.DRAW_MODE = GL_TRIANGLES;
+        self.DRAW_MODE = self.DRAW_MODE || GL_TRIANGLES;
         self.built[context.id] = context;
   
         var vertices = [], colors = [], textureCoords = [], normals = [], indices = [];
@@ -292,10 +292,10 @@ var Renderable = function() {
           else ; // color isn't explicitly set, but color vertices exist, so use them.
         }
         
-        if (vertices.length > 0)      self.setGLVertexBuffer(new VertexBuffer(context, vertices));
-        if (colors.length > 0)        self.setGLColorBuffer(new ColorBuffer(context, colors));
-        if (indices.length > 0)       self.setGLIndexBuffer(new ElementArrayBuffer(context, indices));
-        if (normals.length > 0)       self.setGLNormalBuffer(new NormalBuffer(context, normals));
+        if (vertices.length > 0)      self.setGLVertexBuffer(context, new VertexBuffer(context, vertices));
+        if (colors.length > 0)        self.setGLColorBuffer(context,  new ColorBuffer(context, colors));
+        if (indices.length > 0)       self.setGLIndexBuffer(context,  new ElementArrayBuffer(context, indices));
+        if (normals.length > 0)       self.setGLNormalBuffer(context, new NormalBuffer(context, normals));
         self.originalTextureCoords = textureCoords;
         
         // After the object has been built, we need to iterate through any textures that may have been registered

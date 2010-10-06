@@ -16,10 +16,20 @@ var Buffer = Class.create({
   
   rebuild: function() {
     if (!this.buffer) this.buffer = this.context.gl.createBuffer();
-    this.context.gl.bindBuffer(this.bufferType, this.buffer);
-    this.context.gl.bufferData(this.bufferType, new this.classType(this.js), this.drawType);
+    this.refresh();
     this.buffer.itemSize = this.itemSize;
     this.buffer.numItems = this.js.numItems;
+  },
+  
+  refresh: function() {
+    if (this.classTypeInstance)
+      for (var i = 0; i < this.js.length; i++)
+        this.classTypeInstance[i] = this.js[i];
+    else
+      this.classTypeInstance = new this.classType(this.js);
+    
+    this.context.gl.bindBuffer(this.bufferType, this.buffer);
+    this.context.gl.bufferData(this.bufferType, this.classTypeInstance, this.drawType);
   },
   
   dispose: function() {

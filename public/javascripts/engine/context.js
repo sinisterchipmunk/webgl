@@ -98,7 +98,7 @@ var WebGLContext = function() {
     
             self.gl.viewport(0, 0, self.gl.viewportWidth, self.gl.viewportHeight);
             self.gl.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            perspective(45, self.gl.viewportWidth / self.gl.viewportHeight, 0.1, 100.0);
+            perspective(45, self.gl.viewportWidth / self.gl.viewportHeight, 0.1, 200.0);
             loadIdentity();
       
             if (self.render) self.render(self);

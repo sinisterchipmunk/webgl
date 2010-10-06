@@ -1,0 +1,40 @@
+<script>
+  <%content_for :global do%>
+    var skeleton;
+  <%end%>
+  
+<%content_for :init do%>
+  skeleton = new Skeleton({bones:{name     :"one",
+                                  offset   :[0,0,0],
+                                  joints   :[{name   :"two",
+                                              offset  :[1,1,1],
+                                              joints  :[{name: "three",
+                                                         offset: [1,0,0],
+                                                         joints: []}]}]}});
+
+  /*
+    Notice that in the following animation, all rotations and translations are in absolute coordinates. This means
+    that in order to produce "no change" from one frame to the next, the previous value must be carried over. "Zero"
+    would produce a movement back to the skeleton's "rest" state.
+   */
+
+  skeleton.addKeyframe(   1, [ 0,1,1], [0,0,0, 0,0,       0, 0,0,0]);
+  skeleton.addKeyframe(   1, [-1,0,0], [0,0,0, 0,0, Math.PI, 0,0,0]);// rotate 90 deg clockwise over 1 second, translating left 1 unit
+  skeleton.addKeyframe(   1, [-1,0,0], [0,0,0, 0,0,-Math.PI, 0,0,0]);// rotate 180 deg counterclockwise over 1 second, holding still
+  skeleton.addKeyframe(   1, [ 0,1,0], [0,0,0, 0,0,-Math.PI, 0,0,0]);// do not rotate, translate up and right 1 unit, over 1 second
+
+  // now animate the last bone, leaving the other 2 alone
+  skeleton.addKeyframe(   1, [ 0,1,0], [0,0,0, 0,0,-Math.PI, 0,0,-Math.PI]);
+
+  skeleton.play();
+
+  world.camera.move(-5);
+  world.addObject(skeleton);
+<%end%>
+        
+<%content_for :render do%>
+  world.render();
+<%end%>
+</script>
+
+<a href="#" onclick="if (skeleton.playing) skeleton.stop(); else skeleton.play(); return false;">Play / Stop</a>

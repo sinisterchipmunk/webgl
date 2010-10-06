@@ -60,9 +60,13 @@ class EngineTestsController < ApplicationController
     dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
   end
   
+  def skeleton
+    dependencies << 'objects/skeleton' << 'tests/objects/skeleton'
+  end
+  
   private
   def choose_layout
-    params[:action] == "bvh_editor" ? nil : "engine_tests"
+    params[:action] == "animation_editor" ? nil : "engine_tests"
   end
   
   def dependencies
