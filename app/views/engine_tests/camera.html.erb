@@ -25,8 +25,8 @@
     var rotation_speed = 0.5;
     var strafing_speed = 1.0;
     
-    movement_speed *= 0.15; // because that's the delay between frames (via setInterval, above)
-    rotation_speed *= 0.15; // in an offline app we'd calculate time elapsed between frames.
+    movement_speed *= 0.15; // we multiply by time passed. For any real world application we'd not rely on
+    rotation_speed *= 0.15; // setInterval and we'd calculate actual time elapsed instead.
     strafing_speed *= 0.15;
     
     if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
