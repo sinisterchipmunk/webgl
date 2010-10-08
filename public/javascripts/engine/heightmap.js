@@ -104,42 +104,6 @@ var HeightMap = function() {
   });
 }();
 
-/*
-function HeightMap(image, options)
-{
-  // valid options include: 
-  //    scale  - how many times this texture will be tiled over the object. Defaults to 1.
-  //    scaleX - just like scale, but is only applied horizontally.
-  //    scaleY - just like scale, but is only applied vertically.
-  self.addTexture = function(texture, options)
-  {
-    options.scale = options.scale || 1;
-    options.scaleX = options.scaleX || options.scale;
-    options.scaleY = options.scaleY || options.scale;
-    
-    var buffer = self.gl.createBuffer();
-    textureBuffers.push(buffer);
-    
-    self.gl.bindBuffer(self.gl.ARRAY_BUFFER, buffer);
-    
-    var textureData = [];
-    each_vertex(function(x, z) {
-      textureData.push((x)/self.width()*options.scaleX, (z)/self.depth()*options.scaleY);
-    });
-    buffer.texture = texture;
-    buffer.itemSize = 2;
-    buffer.numItems = textureData.length / 2;
-    assert_equal(buffer.numItems, vertexBuffer.numItems);
-    
-    self.gl.bufferData(self.gl.ARRAY_BUFFER, new Float32Array(textureData), gl.STATIC_DRAW);
-  };
-  
-
-  
-  self.rebuild(image);
-}
-*/
-
 HeightMap.normalize = function(map)
 {
   var data = new Array();
@@ -190,7 +154,7 @@ HeightMap.load = function(image)
   context.drawImage(image, 0, 0);
   var image_data;
   try {
-    image_data = context.getImageData(0, 0, image.width, image.height);
+    image_data =  context.getImageData(0, 0, image.width, image.height);
   } catch (e) {
     netscape.security.PrivilegeManager.enablePrivilege("UniversalBrowserRead");
     image_data = context.getImageData(0, 0, image.width, image.height);

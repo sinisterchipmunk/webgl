@@ -5,6 +5,7 @@
 # You are also HIGHLY encouraged to check out the Auth::Configuration class documentation
 # for a list of all the options you can set here. There are a LOT of them.
 #
+=begin
 Auth.configure do |config|
   config.authenticate :user, :key => 'email'
     # Adds a model to be authenticated. See the Auth::Model class for information on
@@ -28,3 +29,4 @@ Auth.configure do |config|
   # about these options. (For example, see Auth::Behaviors::RememberMe::Configuration for
   # the Remember Me configuration options.)
 end
+=end

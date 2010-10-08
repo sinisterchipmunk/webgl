@@ -13,5 +13,5 @@ after_initialize(function() {
       if (hm.scale != 0.5) alert("hm.scale should == 0.5");
     });
   };
-  img.src = "http://localhost/~colin/rails-game/images/rails.png";
+  img.src = "/images/rails.png";
 });
