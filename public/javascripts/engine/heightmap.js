@@ -188,7 +188,13 @@ HeightMap.load = function(image)
   canvas.height = image.height;
   var context = HeightMap.context();
   context.drawImage(image, 0, 0);
-  var image_data = context.getImageData(0, 0, image.width, image.height);
+  var image_data;
+  try {
+    image_data = context.getImageData(0, 0, image.width, image.height);
+  } catch (e) {
+    netscape.security.PrivilegeManager.enablePrivilege("UniversalBrowserRead");
+    image_data = context.getImageData(0, 0, image.width, image.height);
+  }
   
   return image_data;
 };
