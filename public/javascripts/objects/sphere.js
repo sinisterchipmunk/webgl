@@ -1,13 +1,25 @@
 var Sphere = Class.create(Renderable, {
-  initialize: function($super, radius) {
-    this.radius = radius;
+  /* options is either a radius (which will default to 30 stacks and 30 slices), or
+     an object with stacks, slices and a radius.
+     
+     stacks - the number of horizontal divisions, like lines of latitude.
+     slices - the number of vertical divisions, like lines of longitude.
+     radius - one half the distance from one side to the other of this sphere.
+     
+     In general, fewer stacks and slices means better improvement but lower image quality.
+   */
+  initialize: function($super, options) {
+    if (typeof(options) == "number") options = { radius: options, stacks: 30, slices: 30 };
+    this.radius = options.radius;
+    this.stacks = options.stacks;
+    this.slices = options.slices;
     $super();
   },
   
   init: function(vertices, colors, textureCoords, normals, indices) {
     var self = this;
     
-    var slices = 30, stacks = 30;
+    var slices = this.slices, stacks = this.stacks;
     var slice, stack;
     for (slice = 0; slice <= slices; slice++) {
       var theta = slice * Math.PI / slices;

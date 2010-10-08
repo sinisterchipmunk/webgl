@@ -5,15 +5,16 @@
   <%end%>
           
   <%content_for :init do%>
-    JSON3D.load("/3d/teapot.json", function(obj) { world.addObject(teapot = obj); });
-    texture = new Texture("/images/textures/poormansgrass.png");
+    JSON3D.load("/3d/teapot.json", function(obj) {
+      world.addObject(teapot = obj);
+      teapot.texture = "/images/textures/poormansgrass.png";
+    });
     world.camera.translateTo(0,0,50);
   <%end%>
           
   <%content_for :render do%>
     if (teapot) {
-      if (texture && $('use-texture').checked) {
-        teapot.texture = texture;
+      if ($('use-texture').checked) {
         teapot.shader = 'color_with_texture';
       }
       else teapot.shader = 'color_without_texture';
@@ -29,9 +30,5 @@
     }
   <%end%>
 </script>
-
-<%content_for :head do%>
-  <style>#canvas { float: left; }</style>
-<%end%>
 
 <input type='checkbox' id='use-texture' checked /> Use Texture

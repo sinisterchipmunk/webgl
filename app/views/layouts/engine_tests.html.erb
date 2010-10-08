@@ -86,8 +86,8 @@
         mouse.overCanvas = true;
         mouse.offsetx = mouse.x;
         mouse.offsety = mouse.y;
-        mouse.x = event.clientX - $(self).cumulativeOffset()[0]+1;
-        mouse.y = event.clientY - $(self).cumulativeOffset()[1]+1;
+        mouse.x = event.clientX - $(self).cumulativeOffset()[0]-1;
+        mouse.y = event.clientY - $(self).cumulativeOffset()[1]-1;
         if (mouse.offsetx)
           mouse.diffx = mouse.x - mouse.offsetx;
         if (mouse.offsety)
@@ -141,7 +141,7 @@
   </script>
   
   <style>
-    #canvas { float: left; }
+    #canvas { float: left; margin-right: 1em; }
     <%=yield :style%>
   </style>
 </head>
@@ -153,5 +153,14 @@
     </div>
     <canvas id="canvas" style="border: none;" width="800" height="500"></canvas>
     <%=yield%>
+    <p>
+      <%=link_to "See the Source Code", File.join("http://github.com/sinisterchipmunk/webgl/tree/master/app/views/",
+                                                  params[:controller], "#{params[:action]}.html.erb")%>
+      <br/>
+      <%=link_to "My Blog", "http://thoughtsincomputation.com"%>
+    </p><p>
+      Disclaimer: 100% of the code on this site was designed specifically for the Firefox 4.0 beta and hasn't yet been
+      tested with any other browser. That means it'll almost certainly NOT work with any other browser.
+    </p>
   </body>
 </html>

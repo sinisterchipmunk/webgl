@@ -11,31 +11,18 @@ var Renderable = function() {
 
   function getPickShader(self, context) {
     if (!context) throw new Error("no context given!");
-    if (self.pickShader) return self.pickShader;
-    var color  = encodeToColor(self.object_id);
-    self.pickShader = context.createShader();
-    self.pickShader.vertex.source = "attribute vec3 aVertexPosition;\n" +
-                               "uniform mat4 mvMatrix;\n" +
-                               "uniform mat4 pMatrix;\n" +
-                               "void main(void) {\n" +
-                               "  gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);\n" +
-                               "}";
+    if (self.pickShader && self.pickShader[context.id]) return self.pickShader[context.id];
+    if (!self.pickShader) self.pickShader = {};
+    self.pickShader[context.id] = new Renderable.PickShader(context, self.object_id).shader;
     
-    self.pickShader.fragment.source = "#ifdef GL_ES\n" +
-                                 "precision highp float;\n" +
-                                 "#endif\n" +
-                                 "void main(void) {\n" +
-                                 "  gl_FragColor = vec4("+color[0]/255+","+color[1]/255+","+color[2]/255+","+color[3]/255+");\n" +
-                                 "}";
-    self.pickShader.compile();
-    
-    return self.pickShader;
+    return self.pickShader[context.id];
   }
   
   function buildTexture(self, context, descriptor) {
     var coords = [];
     for (var i = 0; i < self.originalTextureCoords.length; i += 2)
       coords.push(self.originalTextureCoords[i]*descriptor.scaleX, self.originalTextureCoords[i+1]*descriptor.scaleY);
+
     if (coords.length != 0)
       descriptor.buffers[context.id] = new TextureCoordsBuffer(context, coords);
   }
@@ -66,7 +53,7 @@ var Renderable = function() {
     initialize: function(init_func, update_func)
     {
       var self = this;
-      self.object_id = Renderable.all.length;
+      self.object_id = ++Renderable.identifier;
       Renderable.all.push(self);
       
       if (init_func) self.init = init_func;
@@ -111,22 +98,26 @@ var Renderable = function() {
                 
         // set the new texture object
         if (typeof(tex) == "string") descriptor.texture = new Texture(tex);
-        else descriptor.texture = tex;
+        else
+          if (tex.bind) descriptor.texture = tex;
+          else throw new Error("Expected texture to be a String (filename) or Texture().");
         if (index == 0)  self.texture = descriptor;
         
         
         // free the GL buffers or they won't be rebuilt
         for (var bufname in descriptor.buffers) {
           var buffer = descriptor.buffers[bufname];
-          descriptor.buffer.dispose();
-        
+                    
           // clear the corresponding JS buffer so we can replace its contents
-          descriptor.buffer.js.clear();
+          buffer.js.clear();
 
           // fill it with the new data. Its GL counterpart will get rebuilt during the first render.
           for (j = 0; j < self.originalTextureCoords.length; j += 2)
-            descriptor.buffer.js.push(self.originalTextureCoords[j]*descriptor.scaleX,
-                                      self.originalTextureCoords[j]*descriptor.scaleY);
+            buffer.js.push(self.originalTextureCoords[j]*descriptor.scaleX,
+                           self.originalTextureCoords[j]*descriptor.scaleY);
+          
+          // refresh the buffer so the JS data makes its way into GL.
+          buffer.refresh();
         }
       });
     },
@@ -159,8 +150,8 @@ var Renderable = function() {
     rebuildPickShader: function(context, index) {
       if (!context) throw new Error("No context given!");
       this.object_id = typeof(index) == "undefined" || index == null ? this.object_id : index;
-      if (this.pickShader) this.pickShader.dispose();
-      this.pickShader = false;
+      if (this.pickShader && this.pickShader[context.id]) this.pickShader[context.id].dispose();
+      this.pickShader[context.id] = false;
       return getPickShader(this, context);
     },
     
@@ -187,7 +178,6 @@ var Renderable = function() {
         // get the related buffers.
         var vertexBuffer  = self.getGLVertexBuffer(context),        indexBuffer  = self.getGLIndexBuffer(context),
             normalBuffer = self.getGLNormalBuffer(context),         colorBuffer   = self.getGLColorBuffer(context);
-            //textureBuffer = self.getGLTextureCoordsBuffer(context);
         
         mode = mode || FILL;
         mvPushMatrix();
@@ -196,13 +186,14 @@ var Renderable = function() {
           // get the active shader
           var shader = (mode == RENDER_PICK ? getPickShader(self, context) : self.shader);
           shader = shader || (self.texture && 'color_with_texture' || 'color_without_texture');
+
           if (typeof(shader) == "string") shader = context.shaders[shader];
           else if (shader.context != context)
             throw new Error("Tried to render an object using a shader from a different context than the current one! (Try using the name of the shader instead)");
   
           // set the shader attributes
           shader.setAttribute('aVertexPosition', vertexBuffer);
-          if (indexBuffer)   context.gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+          if (indexBuffer)   indexBuffer.bind();
           if (normalBuffer)  shader.setAttribute('aVertexNormal', normalBuffer);
           if (colorBuffer)   shader.setAttribute('aVertexColor', colorBuffer);
         
@@ -214,6 +205,7 @@ var Renderable = function() {
                 buildTexture(self, context, descriptor);
               
               context.gl.activeTexture(GL_TEXTURES[i]);
+              if (!descriptor.texture || !descriptor.texture.bind) alert(descriptor.texture.toSource());
               descriptor.texture.bind(context);
               shader.uniform("texture"+i, "uniform1i").value = i;
               shader.setAttribute("texture"+i+"coords", descriptor.buffers[context.id]);
@@ -237,7 +229,7 @@ var Renderable = function() {
             }
           });
             
-          mvPopMatrix();
+        mvPopMatrix();
         context.checkError();
       });
     },
@@ -252,7 +244,7 @@ var Renderable = function() {
         disposeBuffer(self, 'GLIndexBuffer', context);
         disposeBuffer(self, 'GLNormalBuffer', context);
         self.originalTextureCoords = null;
-        if (self.pickShader) { self.pickShader.dispose(); self.pickShader = false; }
+        if (self.pickShader && self.pickShader[context.id]) { self.pickShader[context.id].dispose(); self.pickShader[context.id] = false; }
         for (var i = 0; i < self.textures.length; i++)
           for (var bufname in self.textures[i].buffers)
             if (self.textures[i].buffers[bufname])
@@ -322,3 +314,29 @@ var Renderable = function() {
 
 Renderable.all = [];
 Renderable.update_interval = 30;
+Renderable.identifier = 0;
+
+Renderable.PickShader = Class.create({
+  initialize:function(context, object_id)
+  {
+    if (!context) throw new Error("No context given!");
+    if (!object_id) throw new Error("No object ID given!");
+    
+    var color  = encodeToColor(object_id);
+    this.shader = context.createShader();
+    this.shader.vertex.source = "attribute vec3 aVertexPosition;\n" +
+                               "uniform mat4 mvMatrix;\n" +
+                               "uniform mat4 pMatrix;\n" +
+                               "void main(void) {\n" +
+                               "  gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);\n" +
+                               "}";
+    
+    this.shader.fragment.source = "#ifdef GL_ES\n" +
+                                 "precision highp float;\n" +
+                                 "#endif\n" +
+                                 "void main(void) {\n" +
+                                 "  gl_FragColor = vec4("+color[0]/255+","+color[1]/255+","+color[2]/255+","+color[3]/255+");\n" +
+                                 "}";
+    this.shader.compile();
+  }
+});

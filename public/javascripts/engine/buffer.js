@@ -39,7 +39,7 @@ var Buffer = Class.create({
   
   isDisposed: function() { return !this.buffer; },
   
-  bind: function() { if (!this.buffer) this.rebuild(); context.gl.bindBuffer(this.bufferType, this.buffer); }
+  bind: function() { if (!this.buffer) this.rebuild(); this.context.gl.bindBuffer(this.bufferType, this.buffer); }
 });
 
 // More user-friendly versions of the above

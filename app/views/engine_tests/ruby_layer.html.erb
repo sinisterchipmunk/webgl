@@ -6,25 +6,6 @@
       world.addObject(<%=object.to_js%>);
     <%end%>
   
-    // TODO make all this stuff doable from ruby
-  
-    var img = new Image();
-    img.onload = function() {
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);  
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-      gl.generateMipmap(gl.TEXTURE_2D);  
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      
-      world.objects.each(function(obj) {
-        obj.texture = texture;
-        obj.shader = shaders['color_with_texture'];
-      });
-    };
-    img.src = "/images/textures/poormansgrass.png";  
-    
     world.camera.translateTo(0,0,10);
   <%end%>
           
@@ -40,3 +21,6 @@
 <p>This test demonstrates objects which have been instantiated using the corresponding Ruby code. The view for this
 test shows how a template would go about setting up a generic World, while the initialization that would normally be
 done by the developer in a framework environment is contained within the controller action code.</p>
+<p>Please note that this test is a work in progress and is currently in a very primitive state. I intend to put a lot
+of work into this demo in the future, and eventually I'd like to use it to produce a Rails-based WebGL framework. But
+there's a lot of JavaScript code that has to be in place before I can jump up to the higher-level Ruby generators...</p>

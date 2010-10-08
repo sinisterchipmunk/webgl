@@ -12,7 +12,7 @@ function Camera(options)
   var up       = [0,1,0];
   var right    = view.cross(up).normalize();
   var matrix   = Matrix.I(4);
-  var pmatrix;
+  var pmatrix = null;
   matrix.setLookAt(position, view, up, right);
   
   self.lock_up_vector = options.lock_up_vector || default_options.lock_up_vector;
@@ -71,7 +71,48 @@ function Camera(options)
    */
   self.lookGL = function(gl) {
     setMatrix(matrix);
-    pmatrix = makePerspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+    if (!pmatrix) self.perspective(45, gl);
+    setPMatrix(pmatrix);
+  };
+  
+  /*
+     options can include the following:
+       unit: true or false. If true, scale will be set to {left:-1,bottom:-1,right:1,top:1,near:0.1,far:200}
+       scale: values for viewport size:
+          left  : leftmost coord
+          top   : topmost coord
+          bottom: bottom-most coord
+          right : rightmost coord
+          near  : nearest (positive) coord
+          far   : most-distant coord
+   */
+  self.ortho = function(gl, options) {
+    if (!gl) throw new Error("No WebGL context given!");
+    if (gl.gl) gl = gl.gl;
+    options = options || {};
+    if (options.unit) {
+      options.left   = options.left   || -1;
+      options.top    = options.top    ||  1;
+      options.bottom = options.bottom || -1;
+      options.right  = options.right  ||  1;
+    }
+    else {
+      options.left   = options.left   || 0;
+      options.right  = options.right  || gl.viewportWidth;
+      options.top    = options.top    || gl.viewportHeight;
+      options.bottom = options.bottom || 0;
+    }
+    options.near = options.near || 0.1;
+    options.far  = options.far  || 200;
+
+    pmatrix = makeOrtho(options.left, options.right, options.bottom, options.top, options.near, options.far);
+  };
+  
+  self.perspective = function(fov, gl)
+  {
+    if (!gl) throw new Error("No WebGL context given!");
+    if (gl.gl) gl = gl.gl;
+    pmatrix = makePerspective(fov, gl.viewportWidth / gl.viewportHeight, 0.1, 200.0);
   };
   
   /* Explicitly sets this Camera's orientation. This is a dangerous function, because it does NOT do any

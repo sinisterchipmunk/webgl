@@ -1,6 +1,5 @@
 <script>
   <%content_for :global do%>
-    //var world = new World();
     var renderable = new Renderable(
       // init
       function(vertices, colors, textureCoords, normals, indices) {
@@ -23,22 +22,9 @@
   <%content_for :init do%>
     context.world.camera.translateTo(0,0,10);
   
-    renderable.shader = 'color_without_texture';
     renderable.orientation.translateTo(0,0,1);
+    renderable.texture = "/images/textures/poormansgrass.png";
     logger.level = Logger.DEBUG;
-    var img = new Image();
-    img.onload = function() {
-      var texture = gl.createTexture();
-      context.gl.bindTexture(GL_TEXTURE_2D, texture);  
-      context.gl.texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, img);
-      context.gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
-      context.gl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);  
-      context.gl.generateMipmap(GL_TEXTURE_2D);  
-      context.gl.bindTexture(GL_TEXTURE_2D, null);
-      renderable.texture = texture;
-      renderable.shader = 'color_with_texture';
-    };
-    img.src = "/images/textures/poormansgrass.png";  
   <%end%>
           
   <%content_for :render do%>

@@ -3,9 +3,7 @@
 <%end%>
 
 <%content_for :init do%>
-  setTimeout(function() {
-    quad.texture = new Texture('/images/textures/poormansgrass.png');
-  }, 1000);
+  setTimeout(function() { quad.texture = '/images/textures/poormansgrass.png'; }, 1000);
 
   world.camera.translateTo(0,0,5);
   world.addObject(quad);
@@ -17,5 +15,23 @@
 
 <p>This demo very simply shows the binding of textures. When it is first loaded, no texture is bound and the
 quad's color is set to [1,1,1,1] -- or full white. After a 1.0 second delay, the texture will be retrieved
-from the server and bound to the quad. At this time, the shader is changed from 'color_without_texture' to
-'color_with_texture' and the texture should be visible.</p>
+from the server and bound to the quad. At this time, the quad internally changes its shader from 'color_without_texture'
+to 'color_with_texture' and the texture should be visible.</p>
+<p>
+  Update: Texture management is now handled entirely from within the Renderable object. Now all this demo has to do is:
+  <pre>
+    setTimeout(function() {
+      quad.texture = '/path/to/texture.png';
+    }, 1000); 
+  </pre>
+  ...which is pretty cool, IMO. Multitexturing is also supported:
+  <pre>
+    setTimeout(function() {
+      quad.setTexture(0, '/path/to/texture.png');
+      quad.setTexture(1, '/path/to/another.png');
+      quad.addTexture('/this/works/too.png');
+    }, 1000); 
+  </pre>
+  ...but I don't yet have a shader to demonstrate that. The end goal is, of course, to have these objects generate their
+  own shaders dynamically, based on the number of textures, lights, etc. that are used. But I'm not there yet.
+</p>

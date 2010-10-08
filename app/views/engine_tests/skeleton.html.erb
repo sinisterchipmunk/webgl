@@ -4,13 +4,17 @@
   <%end%>
   
 <%content_for :init do%>
-  skeleton = new Skeleton({bones:{name     :"one",
-                                  offset   :[0,0,0],
-                                  joints   :[{name   :"two",
-                                              offset  :[1,1,1],
-                                              joints  :[{name: "three",
-                                                         offset: [1,0,0],
-                                                         joints: []}]}]}});
+  skeleton = new Skeleton({scale:0.75,bones:{name     :"one",
+                                             offset   :[0,0,0],
+                                             joints   :[{name   :"two",
+                                                         offset  :[0,1,0],
+                                                         joints  :[{name: "three",
+                                                                    offset: [1,0,0],
+                                                                    joints: [{name: "four",
+                                                                              offset:[0,-1,0],
+                                                                              joints:[{name: "five",
+                                                                                       offset: [0.25,0,0],
+                                                                                       joints:[]}]}]}]}]}});
 
   /*
     Notice that in the following animation, all rotations and translations are in absolute coordinates. This means
@@ -18,13 +22,26 @@
     would produce a movement back to the skeleton's "rest" state.
    */
 
-  skeleton.addKeyframe(   1, [ 0,1,1], [0,0,0, 0,0,       0, 0,0,0]);
-  skeleton.addKeyframe(   1, [-1,0,0], [0,0,0, 0,0, Math.PI, 0,0,0]);// rotate 90 deg clockwise over 1 second, translating left 1 unit
-  skeleton.addKeyframe(   1, [-1,0,0], [0,0,0, 0,0,-Math.PI, 0,0,0]);// rotate 180 deg counterclockwise over 1 second, holding still
-  skeleton.addKeyframe(   1, [ 0,1,0], [0,0,0, 0,0,-Math.PI, 0,0,0]);// do not rotate, translate up and right 1 unit, over 1 second
-
-  // now animate the last bone, leaving the other 2 alone
-  skeleton.addKeyframe(   1, [ 0,1,0], [0,0,0, 0,0,-Math.PI, 0,0,-Math.PI]);
+  var r = Math.PI/2;
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [r,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,r,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,r, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, r,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,r,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,r, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, r,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,r,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,r, 0,0,0]);
+  skeleton.addKeyframe(   1, [ 0,0,0], [0,0,0, 0,0,0, 0,0,0, 0,0,0]);
 
   skeleton.play();
 
@@ -36,5 +53,25 @@
   world.render();
 <%end%>
 </script>
+
+<p>
+  This test demonstrates skeletal movement. The skeleton in this example has 5 nodes: one at the origin, one just above
+  it, and so on. The animation rotates 3 of those bones 3 times apiece: first 90 degrees on its X axis, then 90 degrees
+  on its Y axis, and finally 90 degrees on its Z axis. The animation returns to its resting state between each rotation.
+</p>
+
+<p>
+  The lines drawn on the screen are a visual aid. They connect one bone to another. A given bone is a single point
+  in space, and it takes two points to make a line, hence there are 4 lines drawn. Each endpoint on a line represents a
+  single bone in the skeleton.
+</p>
+
+<p>
+  If you look carefully (or not-so-carefully on a slower machine...) you'll notice a slight pause at various intervals.
+  It gets more noticeable with more complicated animations (see the <%=link_to 'Animation Editor', :action => "animation_editor"%>).
+  This is most likely the JavaScript garbage collector doing its thing, because the animation creates a lot of
+  temporary matrices when transforming from one frame to the next. I'm 100% positive that this can be addressed by
+  simply using fewer (or no) temporary objects -- I just haven't had the time to implement the changes.
+</p>
 
 <a href="#" onclick="if (skeleton.playing) skeleton.stop(); else skeleton.play(); return false;">Play / Stop</a>

@@ -4,6 +4,8 @@
 
 <script>
 <%content_for :global do%>
+  var last_render = null;
+  var stopped = false;
   var quad = new Quad(1,1);
   var sphere = new Sphere(1);
   var mouse = {overCanvas:false,x:0,y:0};
@@ -17,7 +19,8 @@
     $("debug").update("Mouse over canvas: "+mouse.overCanvas+"<br/>"+
                       "Mouse X: "+mouse.x+"<br/>"+
                       "Mouse Y: "+mouse.y+"<br/>"+
-                      "Selected object: "+(selectedObject ? selectedObject.object_id : "(none)"));
+                      "Selected object: "+(selectedObject ? selectedObject.object_id : "(none)") +"<br/><br/>" +
+                      "");
   }
 <%end%>
 
@@ -47,6 +50,11 @@
   quad.setColor([0.5,0.5,0.5,1]);
   sphere.setColor([0.5,0.5,0.5,1]);
   sphere.orientation.translateTo(3, 0, 0);
+  sphere.update = function(timechange)
+  {
+    // let's rotate at 90 degrees per second.
+    if (!stopped) rot += Math.PI/2 * timechange;
+  };
 <%end%>
 
 <%content_for :render do%>
@@ -56,7 +64,6 @@
 
   update_debug();
 
-  rot += 0.03;
   var x = Math.cos(rot) * 10;
   var z = Math.sin(rot) * 10;
 
@@ -67,7 +74,6 @@
 
 <%content_for :mouse_moved do%>
   update_debug();
-
 <%end%>
 
 <%content_for :mouse_over do%>
@@ -82,3 +88,10 @@
 </script>
 
 <div id="debug"></div>
+<a href='#' onclick='stopped = !stopped;return false;'>Start / Stop Rotation</a>
+<p>
+  This test demonstrates my implementation of picking -- that is, translating screen coordinates into world coordinates
+  and then figuring out which object is visible at those coordinates. Move your mouse over the objects in the scene and
+  the one you have selected should be highlighted in white. You will also see the object's internal ID above this text
+  next to the "Selected object" caption.
+</p>

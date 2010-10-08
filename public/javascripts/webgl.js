@@ -29,6 +29,10 @@ function setMatrix(m) {
   mvMatrix = m;
 }
 
+function setPMatrix(m) {
+  pMatrix = m;
+}
+
 function perspective(fovy, aspect, znear, zfar) {
   pMatrix = makePerspective(fovy, aspect, znear, zfar);
 }

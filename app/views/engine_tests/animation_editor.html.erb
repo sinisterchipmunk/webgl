@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Skeletal Animation Editor</title>
+  <%= stylesheet_link_tag :all %>
+  <%= javascript_include_tag :defaults %>
+  <%= csrf_meta_tag %>
+  <script type="text/javascript" src="/javascripts/sylvester.js"></script>
+  <script type="text/javascript" src="/javascripts/sylvester-ext.js"></script>
+  <script type="text/javascript" src="/javascripts/gl-utils.js"></script>
+  <script type="text/javascript" src="/javascripts/webgl.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/core.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/assertions.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/vector.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/camera.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/shader.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/world.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/context.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/buffer.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/texture.js"></script>
+  <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
+  <script type="text/javascript" src="/javascripts/objects/skeleton.js"></script>
+  <script type="text/javascript" src="/javascripts/objects/sphere.js"></script>
+  <%dependencies.each do |fi| %>
+    <%=javascript_include_tag fi%>
+  <%end%>
+  
+  <script type="text/javascript">
+    var MODE='edit';
+    logger.level = Logger.DEBUG;
+    var front = null, left = null, top = null, skeleton = null;
+    var gl = null;
+    var frame_count = 0;
+    var world;
+    var selected_bone = null, highlighted_bone = null;
+    var currentKeyframe = null;
+    
+    function webGLStart() {
+      var i;
+      
+      logger.attempt("webGLStart", function() {
+        front = new WebGLContext('canvas-front', <%=shaders.to_json%>);
+        left  = new WebGLContext('canvas-left',  <%=shaders.to_json%>);
+        top   = new WebGLContext('canvas-top',   <%=shaders.to_json%>);
+        skeleton = new Skeleton({
+          "scale": 1,   // scale the size of the skeleton
+          "timeScale": 1, // timeScale 1 means we won't alter the duration of each keyframe
+          "bones":
+            {"name":"Hips","offset":[0.0,0.0,0.0],"joints":[
+              {"name":"Chest","offset":[0.0,0.0914,0.0],"joints":[
+                {"name":"Neck","offset":[0.0,0.3544,0.0],"joints":[
+                  {"name":"Head","offset":[0.0,0.1038,0.0],"joints":[
+                    {"name":"TopOfHead","offset":[0.0,0.083,0.0],"joints":[]}]}]},
+                {"name":"LeftCollar","offset":[0.0212,0.3066,0.0352],"joints":[
+                  {"name":"LeftShoulder","offset":[0.1,0.0,0.0],"joints":[
+                    {"name":"LeftElbow","offset":[0.0,-0.238,0.0],"joints":[
+                      {"name":"LeftWrist","offset":[0.0,-0.1904,0.0],"joints":[
+                        {"name":"LeftHand","offset":[0.0,-0.14,0.0],"joints":[]}]}]}]}]},
+                {"name":"RightCollar","offset":[-0.0212,0.3066,0.0352],"joints":[
+                  {"name":"RightShoulder","offset":[-0.1,0.0,0.0],"joints":[
+                    {"name":"RightElbow","offset":[0.0,-0.238,0.0],"joints":[
+                      {"name":"RightWrist","offset":[0.0,-0.1904,0.0],"joints":[
+                        {"name":"RightHand","offset":[0.0,-0.14,0.0],"joints":[]}]}]}]}]}]},
+              {"name":"LeftHip","offset":[0.0686,0.0,0.0],"joints":[
+                {"name":"LeftKnee","offset":[0.0,-0.38,0.0],"joints":[
+                  {"name":"LeftAnkle","offset":[0.0,-0.3,0.0],"joints":[
+                    {"name":"LeftFoot","offset":[0.0,-0.06,0.0],"joints":[]}]}]}]},
+              {"name":"RightHip","offset":[-0.0686,0.0,0.0],"joints":[
+                {"name":"RightKnee","offset":[0.0,-0.38,0.0],"joints":[
+                  {"name":"RightAnkle","offset":[0.0,-0.3,0.0],"joints":[
+                    {"name":"RightFoot","offset":[0.0,-0.06,0.0],"joints":[]}]}]}]}]}
+        });
+        
+        
+        
+        for (i in skeleton.all) {
+          var bone = skeleton.all[i];
+          if (bone.name)
+          {
+            addNodeOption(bone.name, i);
+          }
+        }
+        
+        var sphere = new Sphere({radius:0.0125,stacks:8,slices:8});
+        var spheres = new Renderable();
+        var pickShaders = {};
+        
+        spheres.render = function(context, mode) {
+          if (skeleton.snapshot)
+          {
+            for (var id in skeleton.all) 
+            {
+              if (id == "length") continue;
+              if (!pickShaders[id]) pickShaders[id] = {};
+              if (!pickShaders[id][context.id]) pickShaders[id][context.id] = new Renderable.PickShader(context, id).shader;
+              
+              var i = skeleton.all[id].index;
+              sphere.orientation.setPosition(skeleton.snapshot[i*3], skeleton.snapshot[i*3+1], skeleton.snapshot[i*3+2]);
+              if (mode == RENDER_PICK)
+                sphere.shader = pickShaders[id][context.id];
+              else
+                if (selected_bone == id) sphere.shader = 'test_red';
+                else if (highlighted_bone == id) sphere.shader = 'test_orange';
+                else sphere.shader = null;
+              sphere.object_id = id;
+              sphere.render(context);
+            }
+          }
+        };
+        front.world.addObject(skeleton);
+        top.world.addObject(skeleton);
+        left.world.addObject(skeleton);
+        
+        front.world.addObject(spheres);
+        top.world.addObject(spheres);
+        left.world.addObject(spheres);
+        
+        // FIXME why doesn't picking work in ortho mode?
+        front.world.camera.ortho(front, {unit:true});
+        top.world.camera.ortho(top, {unit:true,left:-0.25,right:0.25});
+        left.world.camera.ortho(left, {unit:true});
+        
+        front.world.camera.move(-2);
+        top.world.camera.translateTo(0, 1, 0);
+        top.world.camera.orient([0,-1,0], [0,0,-1], [1,0,0]);
+        left.world.camera.translateTo(-2, 0, 0);
+        left.world.camera.orient([1,0,0],[0,1,0],[0,0,1]);
+        
+        if ($('logger')) $('logger').update(logger);
+        
+        var contexts = {front:front, top:top, left:left};
+        for (i in contexts)
+        {
+          var canvas = contexts[i].canvas;
+          canvas.context = contexts[i];
+          canvas.onclick     = canvas_clicked;
+          canvas.onmousemove = mouse_moved;
+          canvas.onmouseover = mouse_over;
+          canvas.onmouseout  = mouse_out;
+          canvas.onmousedown = mouse_down;
+          canvas.onmouseup   = mouse_up;
+        }  
+        
+        initializationComplete();
+        
+        setTimeout(function() {
+          logger.attempt("display content", function() {
+            $("loading").style.display = "none";
+            $("content").style.display = "block";
+            updateForm();
+          })
+        }, 1000);
+        setInterval(calcFramerate, 1000);
+      });
+    }
+    
+    function addNodeOption(text, value) {
+      var node1 = document.createElement("option"), node2 = document.createElement("option");
+      node1.value = node2.value = value;
+      node1.text = node2.text = text;
+      $('edit-selected-bone').add(node2, null);
+      $('animate-selected-bone').add(node1, null);
+    }
+    
+    function calcFramerate() {
+      frame_count = (front.world.framerate + left.world.framerate + top.world.framerate) / 3;
+      if (isNaN(frame_count)) frame_count = "Calculating...";
+      else frame_count = parseInt(frame_count);
+      
+      document.getElementById('framerate').innerHTML = "Avg FPS: "+frame_count;
+    }
+            
+    function canvas_clicked(event) {
+      logger.attempt("canvas_clicked", function() {
+
+      });
+    }
+          
+    function mouse_moved(event) {
+      if (!skeleton) return;
+      var self = this;
+      logger.attempt("mouse_moved", function() {
+        // FIXME doesn't account for scroll offsets
+        mouse.target = self;
+        mouse.overCanvas = true;
+        mouse.offsetx = mouse.x;
+        mouse.offsety = mouse.y;
+        mouse.x = event.clientX - $(self).cumulativeOffset()[0];
+        mouse.y = event.clientY - $(self).cumulativeOffset()[1];
+        
+        if (mouse.offsetx)
+          mouse.diffx = mouse.x - mouse.offsetx;
+        if (mouse.offsety)
+          mouse.diffy = mouse.y - mouse.offsety;
+  
+        highlighted_bone = mouse.target.context.world.pickIndex(mouse.x, mouse.y);
+        
+        if (mouse.down == null) {
+          //mouse moved
+        }
+        else
+        {//mouse dragged
+          var mode = $('dragModeTranslate').checked ? 'translate' : 'rotate';
+          var axisX, axisY, neg = -1;
+
+          if (self.id == 'canvas-top') { axisX = 0; axisY = 2; neg = 1; }
+          if (self.id == "canvas-left"){ axisX = 2; axisY = 1; }
+          if (self.id == "canvas-front"){axisX = 0; axisY = 1; }
+
+          if (currentKeyframe == null) // rest state
+          {
+            if (MODE == 'edit' && selected_bone) {
+              skeleton.all[selected_bone].offset[axisX] += mouse.diffx / 300;
+              skeleton.all[selected_bone].offset[axisY] += mouse.diffy / 300*neg;
+              skeleton.refresh();
+            }
+          } else { // animation state
+            if (mode == "translate") {
+              skeleton.keyframes[currentKeyframe].offset[axisX] += mouse.diffx / 300;
+              skeleton.keyframes[currentKeyframe].offset[axisY] += mouse.diffy / 300 * neg;
+              skeleton.matchKeyframe(currentKeyframe);
+            }
+            else {
+              if (selected_bone) {
+                if (self.id == 'canvas-top') { axisY = 1; }
+                if (self.id == "canvas-left"){ axisY = 0; }
+                if (self.id == "canvas-front"){axisY = 2; }
+
+                var rotation = (-mouse.diffy + mouse.diffx) / 300;
+                var rotations = skeleton.keyframes[currentKeyframe].rotations;
+                var rotationIndex = skeleton.all[selected_bone].index * 3;
+                rotations[rotationIndex+axisY] += rotation;
+                skeleton.matchKeyframe(currentKeyframe);
+              }
+            }
+          }
+          updateForm();
+        }
+      });
+    }
+          
+    function mouse_over(event) {
+      logger.attempt("mouse_over", function() {
+
+      });
+    }
+          
+    function mouse_out(event) {
+      logger.attempt("mouse_out", function() {
+
+      });
+    }
+          
+    function mouse_down(event) {
+      logger.attempt("mouse_down", function() {
+        var button = event.which;
+        
+        mouse.down = mouse.down || {count:0,down:{}};
+        button = mouse.down["button"+button] = {at:[mouse.x,mouse.y]};
+        
+        //mouse pressed
+        if (highlighted_bone) selected_bone = highlighted_bone;
+      });
+    }
+          
+    function mouse_up(event) {
+      logger.attempt("mouse_up", function() {
+        if (mouse.down)
+        {
+          var at = mouse.down["button"+event.which].at;
+          if (at[0] == mouse.x && at[1] == mouse.y)
+            selectBone(highlighted_bone);
+          
+          mouse.down.count--;
+          if (mouse.down.count <= 0)
+            mouse.down = null;
+        }
+      
+        //mouse released
+      });
+    }
+    
+    function createNewRotations() {
+      var rotations = [], i;
+      if (currentKeyframe == null) {
+        for (i = 0; i < skeleton.all.length; i++)
+          rotations.push(0, 0, 0);
+        return rotations;
+      } else {
+        for (i = 0; i < skeleton.keyframes[currentKeyframe].rotations.length; i++)
+          rotations.push(skeleton.keyframes[currentKeyframe].rotations[i]);
+        return rotations;
+      }
+    }
+    
+    function createPosition() {
+      if (currentKeyframe == null) return [0,0,0];
+      var offset = skeleton.keyframes[currentKeyframe].offset;
+      return [offset[0], offset[1], offset[2]];
+    }
+    
+    function createKeyframe() {
+      setKeyframe(skeleton.addKeyframe(1.0, createPosition(), createNewRotations(), currentKeyframe));
+      $("totalKeyframeLabel").update(skeleton.keyframes.length);
+    }
+    
+    function setKeyframe(which) {
+      currentKeyframe = which;
+      skeleton.setCurrentKeyframe(currentKeyframe);
+      if (which == null)
+        $("currentKeyframeLabel").update("None (Resting State)");
+      else $("currentKeyframeLabel").update(which+1);
+      updateForm();
+    }
+  
+    function restKeyframe() {
+      setKeyframe(null);
+    }
+  
+    function decrementKeyframe() {
+      var which;
+      if (skeleton.keyframes.length == 0) which = null;
+      else
+      {
+        if (currentKeyframe == null) which = 0;
+        else
+        {
+          which = currentKeyframe - 1;
+          if (which < 0) which = skeleton.keyframes.length - 1;
+        }
+      }
+      setKeyframe(which);
+    }
+  
+    function incrementKeyframe() {
+      var which;
+      if (skeleton.keyframes.length == 0) which = null;
+      else
+      {
+        if (currentKeyframe == null) which = 0;
+        else {
+          which = currentKeyframe + 1;
+          if (which >= skeleton.keyframes.length) which = 0;
+        }
+      }
+      setKeyframe(which);
+    }
+    
+    function deleteKeyframe() {
+      if (currentKeyframe != null && confirm("Are you sure you wish to delete the current keyframe?")) {
+        skeleton.keyframes.splice(currentKeyframe, 1);
+        if (skeleton.keyframes.length == 0)
+        {
+          currentKeyframe = null;
+          createKeyframe();
+        }
+        else setKeyframe(currentKeyframe);
+      }
+    }
+  
+    function togglePlaying() {
+      if (skeleton.playing)
+      {
+        skeleton.stop();
+        $("animate-toggle-playing").innerHTML = "Start Animation";
+        setKeyframe(currentKeyframe); // this will wipe out partially-interpolated states
+      }
+      else
+      {
+        skeleton.play();
+        $("animate-toggle-playing").innerHTML = "Stop Animation";
+      }
+    }
+  
+    function selectBone(id) {
+      if (id == null || id == -1) {
+        selected_bone = null;
+      }
+      else
+      {
+        if (skeleton.all[id].name == null) {
+          var n = prompt("Selected Bone has no name! This is a Bad Thing -- please name it now:", "");
+          if (n)
+          {
+            skeleton.all[id].name = n;
+            addNodeOption(n, id);
+          }
+        }
+        selected_bone = id;
+      }      
+      updateForm();
+    }
+    
+    function updateForm()
+    {
+      logger.attempt("update form", function() {
+        $("animate-selected-bone").value = $("edit-selected-bone").value = (selected_bone == null ? "-1" : selected_bone);
+        if (currentKeyframe != null)
+        {
+          var keyframe = skeleton.keyframes[currentKeyframe];
+          $("animate-offset-x").value = keyframe.offset[0];
+          $("animate-offset-y").value = keyframe.offset[1];
+          $("animate-offset-z").value = keyframe.offset[2];
+          $("animate-keyframe-time").value = keyframe.time;
+          if (selected_bone == null)
+          {
+            // it would be nice to infer based on when a bone is selected that it should be rotating / translating,
+            // but this can also clash with when a user actually wants to translate the skeleton. So it's disabled for
+            // now.
+            //$("dragModeTranslate").checked = true;
+            $("animate-rotation-x").disabled = true;
+            $("animate-rotation-y").disabled = true;
+            $("animate-rotation-z").disabled = true;
+            if ($("animate-rotation").style.display != "none") $("animate-rotation").style.display = "none";
+          }
+          else
+          {
+            //$("dragModeRotate").checked = true;
+            var bone = skeleton.all[selected_bone];
+            $("animate-rotation-x").value = keyframe.rotations[bone.index*3];
+            $("animate-rotation-y").value = keyframe.rotations[bone.index*3+1];
+            $("animate-rotation-z").value = keyframe.rotations[bone.index*3+2];
+            $("animate-rotation-x").disabled = false;
+            $("animate-rotation-y").disabled = false;
+            $("animate-rotation-z").disabled = false;
+            if ($("animate-rotation").style.display == "none") $("animate-rotation").style.display = "block";
+          }
+        }
+        else
+        {
+          if (selected_bone == null)
+          {
+            $("edit-offset-x").disabled = true;
+            $("edit-offset-y").disabled = true;
+            $("edit-offset-z").disabled = true;
+            if ($("edit-offset").style.display != "none") $("edit-offset").style.display = "none";
+          }
+          else
+          {
+            var bone = skeleton.all[selected_bone];
+            $("edit-offset-x").value = bone.offset[0];
+            $("edit-offset-y").value = bone.offset[1];
+            $("edit-offset-z").value = bone.offset[2];
+            if ($("edit-offset").style.display == "none") $("edit-offset").style.display = 'block';
+            $("edit-offset-x").disabled = false;
+            $("edit-offset-y").disabled = false;
+            $("edit-offset-z").disabled = false;
+          }
+        }
+      });
+    }
+  
+    function setMode(which) {
+      MODE=which;
+      if (MODE == "edit") {
+        skeleton.stop();
+        $('edit-tab').addClassName('selected');
+        $('animate-tab').removeClassName('selected');
+        $('edit-palette').style.display = 'block';
+        $('animate-palette').style.display = 'none';
+        restKeyframe();
+      } else {
+        $('edit-tab').removeClassName('selected');
+        $('animate-tab').addClassName('selected');
+        $('edit-palette').style.display = 'none';
+        $('animate-palette').style.display = 'block';
+        if (skeleton.keyframes.length == 0) createKeyframe();
+        else incrementKeyframe();
+      }
+      updateForm();
+    }
+  
+    function updateFromForm()
+    {
+      logger.attempt("updateFromForm", function() {
+        if (MODE == "animate") {
+          if (currentKeyframe != null) {
+            var keyframe = skeleton.keyframes[currentKeyframe], t;
+            if (!isNaN(t = parseFloat($('animate-offset-x').value))) keyframe.offset[0] = t;
+            if (!isNaN(t = parseFloat($('animate-offset-y').value))) keyframe.offset[1] = t;
+            if (!isNaN(t = parseFloat($('animate-offset-z').value))) keyframe.offset[2] = t;
+            
+            if (!isNaN(t = parseFloat($('animate-keyframe-time').value))) keyframe.time = t;
+            else keyframe.time = null;
+            
+            if (selected_bone != null) {
+              var index = skeleton.all[selected_bone].index*3;
+              if (!isNaN(t = parseFloat($('animate-rotation-x').value))) keyframe.rotations[index]   = t;
+              if (!isNaN(t = parseFloat($('animate-rotation-y').value))) keyframe.rotations[index+1] = t;
+              if (!isNaN(t = parseFloat($('animate-rotation-z').value))) keyframe.rotations[index+2] = t;
+            }
+            
+            skeleton.refresh();
+          }
+        }
+        else {
+          if (selected_bone != null) {
+            var bone = skeleton.all[selected_bone], t;
+            if (!isNaN(t = parseFloat($('edit-offset-x').value))) bone.offset[0] = t;
+            if (!isNaN(t = parseFloat($('edit-offset-y').value))) bone.offset[1] = t;
+            if (!isNaN(t = parseFloat($('edit-offset-z').value))) bone.offset[2] = t;
+
+            skeleton.refresh();
+          }
+        }
+      });
+    }
+  </script>
+  
+  <style>
+    #left { float: left; margin: 0; padding: 0; margin-right: 6px; }
+    #left div { margin: 0; padding: 0; }
+    canvas { border: 0px solid #000; }
+    #canvas-left { width:250px; height:250px; }
+    #canvas-top { width:250px; height:250px; }
+    #canvas-front { width:400px; height:508px; margin-right:2em; }
+    #tools {
+    }
+       
+    .tab {
+      border:1px outset #000;
+      border-bottom:none;
+      padding:2px;
+      display:inline;
+      cursor:pointer;
+    }
+          
+    .selected {
+      padding-top:4px;
+      position:relative;
+      font-weight:800;
+      height:21px;
+      cursor:default;
+    }
+          
+    .palette {
+      display:block;
+      min-width:300px;
+      border:1px solid #000;
+      padding:1em;
+    }
+          
+    td { vertical-align:top; }
+  </style>
+</head>
+  <body onload="webGLStart();">
+    <div id="framerate" style="float:left;width:200px;">Calculating...</div>
+    <div style="float:left;width:100px;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+    <div style="clear:right;"><%=link_to "Back to Index", :action => 'index'%></div>
+    <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
+    </div>
+    <div id="loading">
+      Loading, Please Wait...
+    </div>
+    <div id="content" style="display:none;">
+      <table><tr><td>
+        <div>
+          <canvas id="canvas-top" width="250" height="250"></canvas>
+        </div>
+        <div>
+          <canvas id="canvas-left" width="250" height="250" ></canvas>
+        </div>
+      </td><td>
+        <canvas id="canvas-front" width="400" height="508"></canvas>
+      </td><td>
+        <div id="tools">
+          <div id="tabs">
+            <div id="edit-tab" class="tab selected" onclick="setMode('edit');">
+              Edit
+            </div>
+            <div id="animate-tab" class="tab" onclick="setMode('animate');">
+              Animate
+            </div>
+          </div>
+          <div class="palette" id="edit-palette">
+            <div>
+              Select Bone: <select id="edit-selected-bone" onchange="selectBone(this.value);">
+                <option selected value="-1">(None)</option>
+              </select>
+            </div>
+          
+            <hr width='75%'/>
+            
+            <div id="edit-offset">
+              Bone Offset:<br/>
+              <div style='margin-left:2em;'>
+                X: <input type="text" id="edit-offset-x" value="0" disabled onkeyup="updateFromForm();" /><br/>
+                Y: <input type="text" id="edit-offset-y" value="0" disabled onkeyup="updateFromForm();" /><br/>
+                Z: <input type="text" id="edit-offset-z" value="0" disabled onkeyup="updateFromForm();" /><br/>
+              </div>
+            </div>
+            
+            <div>
+              &nbsp;
+            </div>
+          </div>
+          <div class="palette" id="animate-palette" style="display:none;">
+            <div>
+              Current Keyframe:
+              <span id="currentKeyframeLabel">None (Resting State)</span> / <span id="totalKeyframeLabel">0</span><br/>
+              <input type="button" onclick="decrementKeyframe();" value="Back" />
+              <input type="button" onclick="incrementKeyframe();" value="Forward" />
+              <input type="button" onclick="createKeyframe();" value="Create After Current" />
+              <input type="button" onclick="deleteKeyframe();" value="Delete Current" />
+              <br/>
+              Keyframe Time:
+              <input type="text" id="animate-keyframe-time" onkeyup="updateFromForm();" value="1000" />
+            </div>
+            
+            <hr width='75%'/>
+            
+            Select Bone: <select id="animate-selected-bone" onchange="selectBone(this.value);">
+              <option selected value="-1">(None)</option>
+            </select>
+            
+            <hr width='75%'/>
+            <div>
+              Drag mouse to: 
+              <input type="radio" name="dragMode" id="dragModeTranslate" value="translate" checked /> <label for="dragMode">Move Skeleton</label>
+              <input type="radio" name="dragMode" id="dragModeRotate" value="rotate" />  <label for="dragMode">Rotate Bone</label>
+            </div>
+            <div>
+              Skeleton Offset:
+              <div style='margin-left:2em;'>
+                X: <input type="text" id="animate-offset-x" value="0" onkeyup="updateFromForm();" /><br/>
+                Y: <input type="text" id="animate-offset-y" value="0" onkeyup="updateFromForm();" /><br/>
+                Z: <input type="text" id="animate-offset-z" value="0" onkeyup="updateFromForm();" />
+              </div>
+            </div>
+            <div id="animate-rotation">
+              Bone Rotation:
+              <div style='margin-left:2em;'>
+                X: <input type="text" id="animate-rotation-x" value="0" onkeyup="updateFromForm();" /><br/>
+                Y: <input type="text" id="animate-rotation-y" value="0" onkeyup="updateFromForm();" /><br/>
+                Z: <input type="text" id="animate-rotation-z" value="0" onkeyup="updateFromForm();" />
+              </div>
+            </div>
+            
+            <hr width='75%'/>
+            
+            <div style='text-align:center;'>
+              <a href="#" id="animate-toggle-playing" onclick="togglePlaying();return false;">Start Animation</a>
+            </div>
+            <div>
+              &nbsp;
+            </div>
+          </div>
+        </div>
+      </td></tr></table>
+    </div>
+  </body>
+</html>

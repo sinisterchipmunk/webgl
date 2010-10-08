@@ -1,5 +1,3 @@
-require("objects/renderable");
-
 var JSON3D = Class.create(Renderable, {
   initialize: function($super, object3d)
   {

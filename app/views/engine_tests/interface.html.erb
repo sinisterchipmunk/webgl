@@ -34,7 +34,7 @@
     heightMap = new HeightMap(img, {magnitude:4});
     world.addObject(heightMap);
     context.checkError();
-    heightMap.addTexture(new Texture("/images/textures/poormansgrass.png"), {scale:3});
+    heightMap.addTexture("/images/textures/poormansgrass.png", {scale:3});
     context.checkError();
   };
   img.src = "/images/height.png";
@@ -49,3 +49,11 @@
   world.render();
 <%end%>
 </script>
+
+<p>
+  The "Interface" demo combines the various other demos to produce a mock-up, would-be game interface. It's not an
+  actual game, though I do hope to code a game in WebGL one day.
+</p>
+<p>
+  Currently, this demo makes use of World, Camera, HeightMap and Texture.
+</p>
