@@ -17,7 +17,10 @@ var JSON3D = Class.create(Renderable, {
 JSON3D.load = function(filename, success) {
   new Ajax.Request(filename, {
     onSuccess: function(response) {
-      success(new JSON3D(response.responseJSON));
+      logger.attempt("JSON3D.load-success", function() {
+        if (response.responseJSON == null) throw new Error("Could not parse a JSON object from the response text:\n\n"+response.responseText);
+        success(new JSON3D(response.responseJSON));
+      });
     },
     evalJSON: true,
     method: 'get'
