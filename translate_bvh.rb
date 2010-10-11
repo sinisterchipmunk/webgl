@@ -2,13 +2,26 @@ require File.join(File.dirname(__FILE__), "config/environment")
 
 skel = Bvh.import(File.join(File.dirname(__FILE__), ARGV[0]))
 
+def each_node(root)
+  relative_index = 0
+  func = proc do |node, parent|
+    yield(node, parent, relative_index)
+    relative_index += 1
+    node[:joints].each do |joint|
+      func.call(joint, node)
+    end
+  end
+  
+  func.call(root, nil)
+end
+
 def translate_node(node)
   { name: node.name,
     offset: node.offset,
     joints: node.joints.collect { |joint| translate_node(joint) } }
 end
 
-def translate_frame(frame, frame_time)
+def translate_frame(skele, frame, frame_time)
   data = frame.channel_data
   first = data.shift
   
@@ -32,7 +45,7 @@ def translate_frame(frame, frame_time)
 end
 
 root = translate_node(skel.root)
-keyframes = skel.frames.collect { |frame| translate_frame(frame, skel.frame_time) }
+keyframes = skel.frames.collect { |frame| translate_frame(root, frame, skel.frame_time) }
 
 result = { bones: root, keyframes: keyframes, timeScale: 1, scale: 1 }
 

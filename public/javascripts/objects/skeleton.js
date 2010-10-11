@@ -371,10 +371,14 @@ var Keyframe = Class.create({
   }
 });
 
-Skeleton.load = function(path, func) {
+Skeleton.load = function(path, options, func) {
+  if (!func && typeof(options) == "function") { func = options; options = {}; }
+  
   new Ajax.Request(path, {method: "get", evalJSON: true, onSuccess: function(resp) {
     logger.attempt("Skeleton#load", function() {
-      var skeleton = new Skeleton(resp.responseJSON);
+      for (var i in resp.responseJSON)
+        if (typeof(options[i]) == "undefined") options[i] = resp.responseJSON[i];
+      var skeleton = new Skeleton(options);
       func(skeleton);
     });
   }});

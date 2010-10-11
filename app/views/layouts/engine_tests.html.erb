@@ -35,7 +35,7 @@
     function drawScene() {
       frame_count += 1;
 
-      <%=yield :render%>
+      <%=render_content = yield :render%>
       context.checkError();
     }
   
@@ -44,7 +44,10 @@
         context = new WebGLContext('canvas', <%=shaders.to_json%>);
         gl = context.gl;
         world = context.world;
-        context.render = drawScene;
+        
+        <%if !render_content.blank?%>
+          context.render = drawScene;
+        <%end%>
 
         logger.level = Logger.DEBUG;
         if ($('logger')) $('logger').update(logger);

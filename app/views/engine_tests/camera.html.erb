@@ -55,13 +55,6 @@
   try {
     camera.look(gl);
           
-    var pos = camera.getPosition(), view = camera.getView(), up = camera.getUp(), right = camera.getRight();
-    var debug = document.getElementById('debug');
-    debug.innerHTML = "Position: "+pos.toSource()+"<br/>" +
-                      "View: "+view.toSource()+"<br/>" +
-                      "Up: "+up.toSource()+"<br/>" +
-                      "Right: "+right.toSource()+"<br/>" +
-                      "Magnitude: "+pos.magnitude();
   } catch(e) { alert(e+"\n\n"+e.stack); }
 
   tri.render(context);
