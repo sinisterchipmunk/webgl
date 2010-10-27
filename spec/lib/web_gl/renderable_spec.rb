@@ -10,7 +10,7 @@ describe WebGL::Renderable do
   end
   
   it "should produce 'new Renderable();'" do
-    subject.to_js.should == "new Renderable(function(){},function(){},function(){})"
+    subject.to_js.should == "new Renderable(function(){},function(timechange){},function(){})"
   end
   
   it "should set initializer code" do

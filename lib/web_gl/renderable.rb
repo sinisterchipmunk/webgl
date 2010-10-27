@@ -29,7 +29,11 @@ class WebGL::Renderable
   end
   
   def to_js
-    "new #{base_class}(#{js_arguments})"
+    if js_render.blank?
+      "new #{base_class}(#{js_arguments})"
+    else
+      "(function(){var r = new #{base_class}(#{js_arguments});r.render=#{js_render_function};return r;})()"
+    end
   end
   
   def js_init_function
@@ -37,15 +41,15 @@ class WebGL::Renderable
   end
   
   def js_update_function
-    function(js_update)
+    function(js_update, :timechange)
   end
   
   def js_render_function
-    function(js_render)
+    function(js_render, :context, :mode)
   end
   
-  def function(body)
-    body.nil? ? nil : "function(){#{body}}"
+  def function(body, *args)
+    body.nil? ? nil : "function(#{args.join(',')}){#{body}}"
   end
   
   def arguments
@@ -54,7 +58,7 @@ class WebGL::Renderable
   
   def js_arguments
     args = arguments.inject { |prev, arg| prev.blank? ? arg.to_json : [prev, arg.to_json].join(",") }
-    funcs = [js_init_function, js_update_function, js_render_function].reject { |e| e.nil? }.join(',')
+    funcs = [js_init_function, js_update_function].reject { |e| e.nil? }.join(',')
     if !args.blank? && !funcs.blank?
       [funcs,args].join(',')
     elsif !args.blank?

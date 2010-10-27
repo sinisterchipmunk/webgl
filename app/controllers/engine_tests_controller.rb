@@ -1,6 +1,6 @@
 class EngineTestsController < ApplicationController
   layout :choose_layout
-  helper_method :dependencies, :shaders, :objects
+  helper_method :dependencies, :shaders, :objects, :world
   before_filter :add_all_shaders
   
   def index
@@ -20,6 +20,7 @@ class EngineTestsController < ApplicationController
 
   def camera
     dependencies << 'tests/engine/camera'
+    world.camera.position = [0,0,5]
   end
   
   def interface
@@ -53,7 +54,9 @@ class EngineTestsController < ApplicationController
   end
   
   def particles
-    dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d' << 'systems/particle_generator'
+    dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d' << 'objects/particle'
+    world.camera.position = [0,0,10]
+    world << WebGL::Particles::Generator.new
   end
   
   def multi_canvas
@@ -69,6 +72,10 @@ class EngineTestsController < ApplicationController
   end
   
   private
+  def world
+    @world ||= WebGL::World.new
+  end
+  
   def choose_layout
     params[:action] == "animation_editor" ? nil : "engine_tests"
   end

@@ -43,7 +43,8 @@
       logger.attempt("webGLStart", function() {
         context = new WebGLContext('canvas', <%=shaders.to_json%>);
         gl = context.gl;
-        world = context.world;
+        world = context.world = <%=world.to_js.html_safe%>;
+        context.world.context = context;
         
         <%if !render_content.blank?%>
           context.render = drawScene;
@@ -159,7 +160,7 @@
       <%=link_to "See the Source Code", File.join("http://github.com/sinisterchipmunk/webgl/tree/master/app/views/",
                                                   params[:controller], "#{params[:action]}.html.erb")%>
       <br/>
-      <%=link_to "My Blog", "http://thoughtsincomputation.com"%>
+      <%=link_to "Thoughts in Computation", "http://thoughtsincomputation.com"%>
     </p><p>
       Disclaimer: 100% of the code on this site was designed specifically for the Firefox 4.0 beta and hasn't yet been
       tested with any other browser. That means it'll almost certainly NOT work with any other browser.

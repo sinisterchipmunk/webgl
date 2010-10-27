@@ -222,7 +222,7 @@ var Renderable = function() {
               context.gl.drawElements(dmode, indexBuffer.numItems, GL_UNSIGNED_SHORT, 0);
               context.checkError();
             }
-            else
+            else if (vertexBuffer)
             {
               context.gl.drawArrays(dmode, 0, vertexBuffer.numItems);
               context.checkError();

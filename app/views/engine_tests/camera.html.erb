@@ -5,7 +5,6 @@
 <script>
 <%content_for :global do%>
   var colorBuffer, vertexBuffer;
-  var camera = new Camera();
   var tri = new Renderable(function(vertices, colors) {
     vertices.push(0,1,-1);
     vertices.push(-1,-1,-1);
@@ -38,26 +37,16 @@
     if (currentlyPressedKeys[65]) translation[0] -= 1; // A
     if (currentlyPressedKeys[68]) translation[0] += 1; // D
     
-    if (translation[2] != 0) camera.move(translation[2]*movement_speed);
-    if (translation[0] != 0) camera.strafe(translation[0]*strafing_speed);
-    if (rotation.magnitude() > 0) camera.rotateView(rotation);
+    if (translation[2] != 0) world.camera.move(translation[2]*movement_speed);
+    if (translation[0] != 0) world.camera.strafe(translation[0]*strafing_speed);
+    if (rotation.magnitude() > 0) world.camera.rotateView(rotation);
   }
 <%end%>
 
 <%content_for :init do%>
-  camera.translateTo(0,0,5);
-  camera.lookAt(0,0,0);
   setInterval(updateKeyboardInput, 15);
   tri.shader = 'color_without_texture';
-<%end%>
-
-<%content_for :render do%>
-  try {
-    camera.look(gl);
-          
-  } catch(e) { alert(e+"\n\n"+e.stack); }
-
-  tri.render(context);
+  world.addObject(tri);
 <%end%>
 </script>
 
