@@ -19,6 +19,7 @@ var MD2 = function() {
         for (k = 0; k < 3; k++) md2.snapshot.vertices[counter*3+k] = (frame.vertices[vindex*3+k]);
         for (k = 0; k < 2; k++) md2.snapshot.textureCoords[counter*2+k] = (md2.model_data.texcoords[tindex][k]);
         for (k = 0; k < 3; k++) md2.snapshot.normals[counter*3+k] = (MD2.normals[frame.normal_indices[vindex]][k]);
+        
         counter++;
       }
     }
@@ -279,8 +280,24 @@ MD2.load = function(model_name, success)
         {
           var frame = response.responseJSON.frames[i];
           for (var j = 0; j < frame.vertices.length; j += 3)
+          {
             for (var k = 0; k < 3; k++)
               frame.vertices[j+k] = (frame.vertices[j+k] * frame.scale[k]) + frame.translation[k];
+
+            // All the MD2 files I've seen so far put the up axis along Z, not Y. I'm going to assume that this
+            // is fairly constant and transpose the values here.
+            var y = frame.vertices[j+2];
+            frame.vertices[j+2] = frame.vertices[j+1];
+            frame.vertices[j+1] = y;
+
+            // now rotate so it's in line with the camera (right now we're turned 90 degrees CCW around the Y axis)
+            var x = frame.vertices[j], z = frame.vertices[j+2];
+            var theta = -Math.PI/2;
+            var vx = x * Math.cos(theta) - z * Math.sin(theta),
+                vz = x * Math.sin(theta) + z * Math.cos(theta);
+            frame.vertices[j] = vx;
+            frame.vertices[j+2] = vz;
+          }
         }
         
         success(new MD2(response.responseJSON));
@@ -380,3 +397,23 @@ MD2.normals = [
   [-0.688191,  0.587785, -0.425325], [-0.587785,  0.425325, -0.688191], [-0.425325,  0.688191, -0.587785], 
   [-0.425325, -0.688191, -0.587785], [-0.587785, -0.425325, -0.688191], [-0.688191, -0.587785, -0.425325]
 ];
+
+// As said above:
+// All the MD2 files I've seen so far put the up axis along Z, not Y. I'm going to assume that this
+// is fairly constant and transpose the values here.
+// that goes for normals too.
+for (var i = 0; i < MD2.normals.length; i++)
+{
+  var y = MD2.normals[i][2];
+  MD2.normals[i][2] = MD2.normals[i][1];
+  MD2.normals[i][1] = y;
+  
+  // now rotate so it's in line with the camera (right now we're turned 90 degrees CCW around the Y axis)
+  var x = MD2.normals[i][0], z = MD2.normals[i][2];
+  var theta = -Math.PI/2;
+  var vx = x * Math.cos(theta) - z * Math.sin(theta),
+      vz = x * Math.sin(theta) + z * Math.cos(theta);
+  MD2.normals[i][0] = vx;
+  MD2.normals[i][2] = vz;
+  MD2.normals[i] = MD2.normals[i].normalize();
+}
