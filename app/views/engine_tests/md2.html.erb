@@ -35,11 +35,14 @@
      */
     function updateModel()
     {
+      $("loading").style.display = "block";
+      
       // if model exists, then we're changing from another. Remove it.
       if (model) world.removeObject(model);
       // Load the new model.
       // TODO: implement some caching for models already loaded. Maybe even eager load them.
       MD2.load($("model").value, function(obj) {
+        $("loading").style.display = 'none';
         $("current-animation").value = obj.current_animation.name;
         
         // Model was loaded successfully. Add it to the world.
@@ -89,11 +92,26 @@
       // misc: deselect the <select> elem so the up arrow key doesn't change selection.
       $('use-lighting').focus();
     }
+  
+    function updateLoading()
+    {
+      logger.attempt("load update", function()
+      {
+        var target = "Loading...";
+        var text = $("loading").innerHTML;
+        if (text == "&nbsp;") text = "";
+        if (text.length < target.length)
+          $("loading").update(target.substring(0, text.length+1));
+        else
+          $("loading").update("&nbsp;");
+      });
+    }
   <%end%>
 
   <%content_for :init do%>
     setInterval(updateKeyboardInput, 15);
   
+    setInterval(updateLoading, 100);
     updateModel();          
     world.camera.translateTo(0,7,75);
   <%end%>
@@ -118,6 +136,8 @@
     shader.uniform('uPointLightLocation', 'uniform3fv').value = function() { return new Float32Array(pointLocation); };
   <%end%>
 </script>
+
+<span id="loading" style='font-size:16pt;color:#aa0;'></span>
 
 <h2>Controls</h2>
 
