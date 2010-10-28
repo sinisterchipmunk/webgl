@@ -71,6 +71,10 @@ class EngineTestsController < ApplicationController
     
   end
   
+  def md2
+    dependencies << 'objects/md2' << 'tests/objects/md2'
+  end
+  
   private
   def world
     @world ||= WebGL::World.new

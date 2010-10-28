@@ -52,11 +52,16 @@ World.prototype = {
   
   renderObjects: function(mode) {
     for (var i in this.objects)
-      this.objects[i].render(this.context, mode);
+      if (this.objects[i])
+        this.objects[i].render(this.context, mode);
   },
   
   addObject: function(object) {
     this.objects[object.object_id] = object;
+  },
+  
+  removeObject: function(object) {
+    this.objects[object.object_id] = null;
   },
   
   pickIndex: function(x, y) {

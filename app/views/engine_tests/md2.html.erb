@@ -1,0 +1,155 @@
+<script>
+  <%content_for :global do%>
+    var model = null;
+    var texture = null;
+  
+    function updateKeyboardInput()
+    {
+      if (!model) return;
+      var rotation = [0,0,0];
+      var rotation_speed = 0.5;
+      
+      // we multiply by time passed. For any real world application we'd not rely on
+      rotation_speed *= 0.15; // setInterval and we'd calculate actual time elapsed instead.
+      
+      if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
+      if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
+      if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
+      if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[88]) rotation[2] -= rotation_speed; // X
+      if (currentlyPressedKeys[90]) rotation[2] += rotation_speed; // Z
+      
+      if (rotation.magnitude() > 0) model.orientation.rotateView(rotation);
+    }
+  
+    /* This is the meat of the code: load the MD2 object, and then load the corresponding texture file.
+        For now I've hardcoded the texture files to match the MD2 filenames; MD2 files are in fact
+        supposed to contain references to these files but for some reason mine don't. The names
+        of the texture would be returned in the 'skins' segment of data, if they existed.
+        
+        The MD2 loader doesn't yet do the lookup of those files (since I don't have any MD2
+        files using this feature yet with which to test), so it currently has to be set the hard way.
+        But I'm wondering if this isn't a better route: use a Ruby DSL to set up the skins and bypass
+        the MD2 references. It'd be easier and faster to update, and would be less bugprone since
+        the texture paths within an MD2 file are relative to the MD2 itself.
+     */
+    function updateModel()
+    {
+      // if model exists, then we're changing from another. Remove it.
+      if (model) world.removeObject(model);
+      // Load the new model.
+      // TODO: implement some caching for models already loaded. Maybe even eager load them.
+      MD2.load($("model").value, function(obj) {
+        $("current-animation").value = obj.current_animation.name;
+        
+        // Model was loaded successfully. Add it to the world.
+        world.addObject(model = obj);
+        // Make the model use our lighting shader. Otherwise it'll use the default, 'color_with_texture',
+        // which is ugly. TODO: make this automatic, somehow.
+        model.shader = 'per_fragment_lighting_with_texture';
+        // Find the model's skin, load it and then bind it to the model.
+        model.addTexture(new Texture("/images/textures/"+$("model").value+".png"));
+        
+        // register a callback with the animation when it stops, so we can switch anims if needed
+        model.callbacks.anim_complete = function()
+        {
+          if ($("return-to-idle").value == "yes")
+            model.playAnimation("stand", true);
+        }
+      });
+      
+      // misc: deselect the <select> elem so the up arrow key doesn't change selection.
+      $('use-lighting').focus();
+    }
+  
+    function updateAnimation()
+    {
+      var anim = $("current-animation").value;
+      var loop = $("loop-animation").value;
+      
+      if (model && model.current_animation.name != anim)
+        if (loop == "auto") model.playAnimation(anim);
+        else model.playAnimation(anim, loop == "yes");
+      else
+      {
+        // model is already playing, but user has changed options
+        
+        if (loop == "yes")  model.anim_looping = true;
+        if (loop == "no")   model.anim_looping = false;
+        if (loop == "auto") model.anim_looping = model.current_animation.loop;
+        
+        model.start();
+      }
+
+      // misc: deselect the <select> elem so the up arrow key doesn't change selection.
+      $('use-lighting').focus();
+    }
+  <%end%>
+
+  <%content_for :init do%>
+    setInterval(updateKeyboardInput, 15);
+  
+    updateModel();          
+    world.camera.translateTo(0,7,75);
+  <%end%>
+  
+  <%content_for :render do%>
+    if (model) {
+      world.render();
+    }
+    
+    var direction = [1,-0.75,-1];
+    var dircolor = [1,1,1];
+    var ambient = [0.4,0.4,0.4];
+    var pointLocation = [-2, 0, 0];
+    var pointColor = [0, 0, 0];
+  
+    var shader = context.shaders['per_fragment_lighting_with_texture'];
+    shader.uniform('uAmbientColor', 'uniform3fv').value = function() { return new Float32Array(ambient); };
+    shader.uniform('uLightingDirection', 'uniform3fv').value = function() { return new Float32Array(direction.normalize().times(-1)); };
+    shader.uniform('uDirectionalColor', 'uniform3fv').value = function() { return new Float32Array(dircolor); };
+    shader.uniform('uUseLighting', 'uniform1i').value = function() { return $("use-lighting").checked; };
+    shader.uniform('uPointLightColor', 'uniform3fv').value = function() { return new Float32Array(pointColor); };
+    shader.uniform('uPointLightLocation', 'uniform3fv').value = function() { return new Float32Array(pointLocation); };
+  <%end%>
+</script>
+
+<p><input type='checkbox' id='use-lighting' /> Use Lighting</p>
+<p>
+  Model:
+  <select id="model" onchange="updateModel();return true;">
+    <option value="crafty">Crafty</option>
+    <option selected value="laalaa">Laalaa</option>
+    <option value="ogro">Ogro</option>
+    <option value="pknight">Pknight</option>
+  </select>
+</p>
+<p>
+  Animation:
+  <select id="current-animation" onchange="updateAnimation();return true;">
+    <script>
+      for (var name in MD2.animations) document.writeln("<option value='"+name+"'>"+name+"</option>");
+    </script>
+  </select><br/>
+  Loop:
+  <select id="loop-animation" onchange="updateAnimation();return true;">
+    <option value="yes">Yes</option>
+    <option value="no">No</option>
+    <option selected value="auto">Auto</option>
+  </select><br/>
+  Return to Idle ("stand") When Not Looping:
+  <select id="return-to-idle">
+    <option selected value="yes">Yes</option>
+    <option value="no">No</option>
+  </select><br/>
+  <a href="#" onclick="updateAnimation(); model.start();return false;">Start</a>
+  <a href="#" onclick="model.stop();return false;">Stop</a>
+  <a href="#" onclick="updateAnimation(); model.restart();return false;">Restart</a>
+</p>
+
+<p>
+  Use the arrow keys to rotate the model. To rotate about the Z axis (roll), use Z and X.
+  Be sure to play with the other settings, above.
+</p>
+
+<!--<p>This demonstration shows a 3D model that has been loaded from <%=link_to "an external JSON file", "/3d/teapot.json"%> with JSON3D.load().</p>-->

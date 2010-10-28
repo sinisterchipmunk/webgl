@@ -1,0 +1,113 @@
+<Sep 4, 1999>
+================================================================
+Model Name				: crafty
+Installation Directory			: quake2\baseq2\players\crafty
+Author(crafty model and animation)	: John "deepgroove" Turner
+Email Address				: machinecode@earthlink.net 
+
+Model Description: Stylized female.
+
+Additional Info:
+She ships with 2 sets of vwep - one custom, one id. You can use either set, or mix 
+and match. Tremendous help was received on both her custom weapons and her skins - below
+are the people that made it happen, huge thanks to all -   
+
+Custom Weapon Authors:
+======================
+Blaster -
+model/skin	: deepgroove
+mapping		: steve o
+
+Shotgun - 
+model/mapping/skin: Rikki "Phukyumoto" Knight
+
+Sshotgun -
+model		: steve o
+mapping		: deepgroove
+skin		: MassiveBitch
+
+Machinegun -
+model/skin	: steve o
+mapping		: deepgroove
+
+Chaingun -
+model/skin	: steve o
+mapping		: deepgroove
+
+Glauncher -
+model		: MassiveBitch
+mapping		: r13
+skin		: EvilBastard
+
+Rlauncher -
+model/skin	: steve o
+mapping		: deepgroove
+
+Hyperblaster -
+model		: MassiveBitch
+mapping/skin	: HitmanDaz
+
+Railgun -
+model/mapping	: r13
+skin		: Ogro-FiX
+
+BFG - 
+model/mapping/skin: deepgroove
+
+
+Skin Authors:
+=============
+crafty	: deepgroove
+ctf_b	: deepgroove
+ctf_r	: deepgroove
+Eclipse	: MassiveBitch
+Electra	: Firestarter
+Krystal	: BurntKona
+O3CHINA	: Ophelia 3
+O3FROST	: Ophelia 3
+O3LATEX	: Ophelia 3
+O3VINYL	: Ophelia 3
+ruby	: BurntKona
+SilkCamo: Stilgar
+
+Additional Credits to: 
+Q2PMP - an incredible resource for just about all aspects of 3d character animation.
+id software - making it (pretty)easy to screw around with shit.
+
+
+================================================================
+* Play Information *
+
+New Sounds              : Negative
+CTF Skins               : Affirmative
+VWEP Support            : Affirmative (2 sets: custom or id)
+
+* Construction *
+Poly Count              : 746
+Vert Count              : 374
+Skin Wastage		: 25%
+Skin Count              : 12
+Base                    : Negative
+Editor used             : MAX/Character Studio, Q2 Modeler, NST, Photoshop
+Known Bugs              : Some clipping with the larger weapons
+Build/Animation time    : I just don't know
+
+
+* How to use this model *
+
+- Create a sub-directory called "crafty" in your "quake2\baseq2\players" directory and 
+extract the contents of "crafty.zip" to it.
+
+- Crafty will use her custom weapons by default. To use one or more of the standard id 
+weapons instead, extract the appropriate md2 file(s) from "standard_weps.zip" and replace the
+file(s) having the same name(s) in your crafty directory. Be sure to back up your custom weapon
+files beforehand if you plan on using them again.
+
+
+* Copyright / Permissions *
+
+QUAKE(R) and QUAKE II(R) are registered trademarks of id Software, Inc.
+
+Feel free to use any of the work that has been done by myself (deepgroove) as long as credit 
+is given. Please contact all other content authors personally for the specifics on the useage
+of their work.
