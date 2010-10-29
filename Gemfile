@@ -12,6 +12,7 @@ gem 'json'
 # gem 'jsbuilder'
 
 group :development, :test do
+  gem 'sqlite3-ruby'
   gem "rspec-rails", ">= 2.0.0.beta.22"
   gem "webrat"
   gem "database_cleaner"

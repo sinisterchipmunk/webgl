@@ -53,6 +53,8 @@
         // Find the model's skin, load it and then bind it to the model.
         model.addTexture(new Texture("/images/textures/"+$("model").value+".png"));
         
+        updateScale();
+        
         // init the model facing right (positive X axis)
         model.orientation.orient([0,0,1],[0,1,0],[-1,0,0]);
 //        model.orientation.orient([1,0,0], [0,1,0], [0,0,1]);
@@ -91,6 +93,15 @@
 
       // misc: deselect the <select> elem so the up arrow key doesn't change selection.
       $('use-lighting').focus();
+    }
+  
+    function updateScale()
+    {
+      var scale = parseFloat($("scale").value);
+      if (model && !isNaN(scale))
+      {
+        model.setScale(scale);
+      }
     }
   
     function updateLoading()
@@ -197,6 +208,11 @@
         <input type="button" value='Stop' onclick="model.stop();return false;">
         <input type="button" value='Restart' onclick="updateAnimation(); model.restart();return false;">
       </p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan='2'>
+      Scale: <input type='text' id='scale' value='1' onkeyup='updateScale();' />
     </td>
   </tr>
 </table>

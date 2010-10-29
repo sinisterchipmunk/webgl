@@ -16,7 +16,7 @@ var MD2 = function() {
         vindex = triangle.vertex_indices[j];
         var tindex = triangle.texcoord_indices[j];
         
-        for (k = 0; k < 3; k++) md2.snapshot.vertices[counter*3+k] = (frame.vertices[vindex*3+k]);
+        for (k = 0; k < 3; k++) md2.snapshot.vertices[counter*3+k] = (frame.vertices[vindex*3+k]) * md2.scale;
         for (k = 0; k < 2; k++) md2.snapshot.textureCoords[counter*2+k] = (md2.model_data.texcoords[tindex][k]);
         for (k = 0; k < 3; k++) md2.snapshot.normals[counter*3+k] = (MD2.normals[frame.normal_indices[vindex]][k]);
         
@@ -63,11 +63,11 @@ var MD2 = function() {
     {
       // figure out vertex interpolation
       for (i = 0; i < currentFrame.vertices.length; i += 3)
-        md2.interpolation.vertices[i+j] = targetFrame.vertices[i+j] - currentFrame.vertices[i+j];
+        md2.interpolation.vertices[i+j] = (targetFrame.vertices[i+j] - currentFrame.vertices[i+j]);
 
       // figure out normal interpolation
       for (i  = 0; i < currentFrame.normal_indices.length; i++)
-        md2.interpolation.normals[i*3+j] = MD2.normals[targetFrame.normal_indices[i]][j] - MD2.normals[currentFrame.normal_indices[i]][j];
+        md2.interpolation.normals[i*3+j] = (MD2.normals[targetFrame.normal_indices[i]][j] - MD2.normals[currentFrame.normal_indices[i]][j]);
     }
     
     // reset the timer and mark the interpolation as valid
@@ -143,8 +143,8 @@ var MD2 = function() {
               
               for (k = 0; k < 3; k++)
               {
-                md2.snapshot.vertices[counter] += md2.interpolation.vertices[vindex*3+k] * percentage;
-                md2.snapshot.normals[counter] += md2.interpolation.normals[vindex*3+k] * percentage;
+                md2.snapshot.vertices[counter] += md2.interpolation.vertices[vindex*3+k] * percentage * md2.scale;
+                md2.snapshot.normals[counter] += md2.interpolation.normals[vindex*3+k] * percentage * md2.scale;
                 counter++;
               }
             }
@@ -168,6 +168,7 @@ var MD2 = function() {
         md2.callbacks.anim_complete = function(md2) { ... }
      */
     initialize: function($super, json) {
+      this.scale = 1.0;
       this.use_interpolation = true;
       this.model_data = json;
       this.snapshot = {vertices:[],normals:[],textureCoords:[]};
@@ -242,6 +243,27 @@ var MD2 = function() {
         initSnapshot(self);
         if (self.interpolation) self.interpolation.valid = false;
       });
+    },
+    
+    setScale: function(scale)
+    {
+      // update the current snapshot to reflect the new scale
+      if (this.snapshot) {
+        // handle divide-by-zero
+        if (this.scale == 0)
+        {
+          this.scale = scale;
+          initSnapshot(this);
+        }
+        else
+        {
+          var i;
+          for (i = 0; i < this.snapshot.vertices.length; i++)
+            this.snapshot.vertices[i] = this.snapshot.vertices[i] / this.scale * scale;
+          this.scale = scale;
+        }
+        updateBuffers(this);
+      }
     },
     
     init: function(vertices, colors, textureCoords, normals, indices) {

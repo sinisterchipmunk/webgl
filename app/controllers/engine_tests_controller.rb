@@ -24,7 +24,11 @@ class EngineTestsController < ApplicationController
   end
   
   def interface
-    dependencies << 'engine/heightmap'
+    dependencies << 'engine/heightmap' << "objects/md2"
+#    Creature.all.each do |creature|
+#      creature.scale = 0.25
+#      world << creature
+#    end
   end
   
   def picking
