@@ -57,14 +57,19 @@ var WebGLContext = function() {
     },
     
     checkError: function() {
+      if (typeof(RELEASE) != "undefined" && RELEASE) return;
       var error = this.gl.getError();
       if (error != this.gl.NO_ERROR)
       {
         var str = "GL error in "+this.canvas.id+": "+error;
         var err = new Error(str);
-        var stack = err.stack.split("\n");
-        stack.shift();
-        var message = err+"\n\n"+stack.join("\n");
+        var message = err;
+        if (err.stack)
+        {
+          var stack = err.stack.split("\n");
+          stack.shift();
+          message += "\n\n"+stack.join("\n");
+        }
         if (logger) logger.error(message);
         else alert(message);
         throw err;
@@ -136,7 +141,10 @@ var WebGLContext = function() {
           //if (shaders[name].isDisposed()) throw new Error("Shader named '"+name+"' has been disposed!");
           this.activeShaderName = name;
           this.activeShader = shaders[name];
-          gl.useProgram(this.activeShader);
+          if (this.activeShader.context)
+            gl.useProgram(this.activeShader.getCompiledProgram());
+          else
+            gl.useProgram(this.activeShader);
           this.checkError();
         }
         else
@@ -187,29 +195,52 @@ WebGLContext.identifier = 0;
   var i;
   var canvas = document.createElement('canvas');
   canvas.setAttribute('id', "temporary internal use");
+  canvas.style.display = "block";
+  var body = document.getElementsByTagName("body")[0], temporaryBody = false;
+  if (!body)
+  {
+    temporaryBody = true;
+    body = document.createElement('body');
+    document.getElementsByTagName("html")[0].appendChild(body);
+  }
+  document.getElementsByTagName("body")[0].appendChild(canvas);
+//  alert(document.root);
+//  document.root.appendChild(canvas);
   var context = new WebGLContext(canvas);
   context.stopRendering();
   
   /* define the GL enums globally so we don't need a context to reference them */
-  var enums = ['UNSIGNED_BYTE', 'FLOAT', 'TEXTURE_2D', 'FRAGMENT_SHADER', "VERTEX_SHADER", "COLOR_BUFFER_BIT",
-               "DEPTH_BUFFER_BIT", "TRIANGLE_STRIP", "TRIANGLES", "LINE_STRIP", "LINES", "ELEMENT_ARRAY_BUFFER",
-               "TEXTURE0", 'UNSIGNED_SHORT', 'RGBA', 'TEXTURE_MAG_FILTER', 'LINEAR', 'LINEAR_MIPMAP_NEAREST',
-               'TEXTURE_MIN_FILTER', 'ARRAY_BUFFER', 'STATIC_DRAW', 'STREAM_DRAW'];
+  window.GL_UNSIGNED_BYTE = context.gl.UNSIGNED_BYTE;
+  window.GL_FLOAT = context.gl.FLOAT;
+  window.GL_TEXTURE_2D = context.gl.TEXTURE_2D;
+  window.GL_FRAGMENT_SHADER = context.gl.FRAGMENT_SHADER;
+  window.GL_VERTEX_SHADER = context.gl.VERTEX_SHADER;
+  window.GL_COLOR_BUFFER_BIT = context.gl.COLOR_BUFFER_BIT;
+  window.GL_DEPTH_BUFFER_BIT = context.gl.DEPTH_BUFFER_BIT;
+  window.GL_TRIANGLE_STRIP = context.gl.TRIANGLE_STRIP;
+  window.GL_TRIANGLES = context.gl.TRIANGLES;
+  window.GL_LINE_STRIP = context.gl.LINE_STRIP;
+  window.GL_LINES = context.gl.LINES;
+  window.GL_ELEMENT_ARRAY_BUFFER = context.gl.ELEMENT_ARRAY_BUFFER;
+  window.GL_TEXTURE0 = context.gl.TEXTURE0;
+  window.GL_UNSIGNED_SHORT = context.gl.UNSIGNED_SHORT;
+  window.GL_RGB = context.gl.RGB;
+  window.GL_RGBA = context.gl.RGBA;
+  window.GL_TEXTURE_MAG_FILTER = context.gl.TEXTURE_MAG_FILTER;
+  window.GL_LINEAR = context.gl.LINEAR;
+  window.GL_LINEAR_MIPMAP_NEAREST = context.gl.LINEAR_MIPMAP_NEAREST;
+  window.GL_TEXTURE_MIN_FILTER = context.gl.TEXTURE_MIN_FILTER;
+  window.GL_ARRAY_BUFFER = context.gl.ARRAY_BUFFER;
+  window.GL_STATIC_DRAW = context.gl.STATIC_DRAW;
+  window.GL_STREAM_DRAW = context.gl.STREAM_DRAW;
   window.GL_MAX_VERTEX_ATTRIBS = context.gl.getParameter(context.gl.MAX_VERTEX_ATTRIBS);
-  for (i = 0; i < enums.length; i++) window["GL_"+enums[i]] = context.gl[enums[i]];
-  
+  window.GL_RENDERBUFFER = context.gl.RENDERBUFFER;
+  window.GL_FRAMEBUFFER = context.gl.FRAMEBUFFER;
+  window.GL_DEPTH_COMPONENT = context.gl.DEPTH_COMPONENT || context.gl.DEPTH_COMPONENT16;
+  window.GL_DEPTH_COMPONENT16 = context.gl.DEPTH_COMPONENT16;
   window.GL_TEXTURES = [];
   for (i = 0; i < 32; i++) window.GL_TEXTURES[i] = context.gl["TEXTURE"+i];
   
-  /* now this part is confusing. For each function in the gl context, we're going to create a version within the
-     WebGLContext prototype which basically does some error checking for us. This prevents us having to call
-     context.checkError() after every call. It will also let us wrap the calls in any other logic we wish, if we
-     ever require that. To bypass context.glSomething, simply call context.gl.something -- but using the former
-     syntax will yield benefits over the long haul.
-   */
-  for (i in context.gl) {
-    if (typeof(context.gl[i]) == "function") {
-      eval("WebGLContext.prototype.gl"+i.capitalize()+" = function() { this.gl."+i+"(arguments); this.checkError(); };");
-    }
-  }
+  if (temporaryBody)
+    $(body).remove();
 })();

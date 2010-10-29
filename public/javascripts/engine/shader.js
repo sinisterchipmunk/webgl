@@ -116,9 +116,9 @@ function Shader(options)
   };
   
   /* Applies the buffers for each attribute. This is called automatically by #bind. */
-  self.applyAttributes = function() {
+  self.applyAttributes = function(program) {
     var gl = self.context.gl;
-    var program = self.getCompiledProgram();
+    if (!program) program = self.getCompiledProgram();
     
     for (var name in attributes) {
       var attribute = attributes[name];
@@ -146,9 +146,9 @@ function Shader(options)
   };
   
   /* Applies the set values for each uniform. This is called automatically by #bind. */
-  self.applyUniforms = function() {
+  self.applyUniforms = function(program) {
     var gl = self.context.gl;
-    var program = self.getCompiledProgram();
+    if (!program) program = self.getCompiledProgram();
     for (var name in uniforms) {
       var uniform = self.uniforms(name);
       if (typeof(uniform.value) != "undefined")
@@ -200,15 +200,15 @@ Shader.prototype = {
     
     if (func)
       self.context.pushShader(program, function() {
-        self.applyUniforms();
-        self.applyAttributes();
+        self.applyUniforms(program);
+        self.applyAttributes(program);
         func();
       });
     else
     {
       self.context.useShader(program);
-      self.applyUniforms();
-      self.applyAttributes();
+      self.applyUniforms(program);
+      self.applyAttributes(program);
     }
   },
   

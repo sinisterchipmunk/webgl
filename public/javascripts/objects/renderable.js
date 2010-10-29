@@ -230,7 +230,7 @@ var Renderable = function() {
           });
             
         mvPopMatrix();
-        context.checkError();
+//        context.checkError();
       });
     },
     

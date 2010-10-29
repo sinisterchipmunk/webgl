@@ -26,11 +26,13 @@ function Logger(name)
   
   function getLine() {
     var e = new Error();
-    var line = e.stack.split("\n")[4];
+    var line;
+    if (e.stack) line = e.stack.split("\n")[4];
+    else line = "";
     line = line.substring(line.lastIndexOf("/")+1, line.length);
     line = line.split(":");
     while (line[0].length < 15) line[0] = " " + line[0];
-    while (line[1].length < 4)  line[1] = line[1] + " ";
+    while (line[1] && line[1].length < 4)  line[1] = line[1] + " ";
     
     return line.join(":");
   }

@@ -25,6 +25,10 @@
   <%end%>
   
   <script type="text/javascript">
+    // this is used to disable context.checkError(), which is slow.
+    // it may be worth noting that context.checkError() is particularly
+    // slow on Chrome; FF gets a much better framerate (40+).
+    var RELEASE = false;
     var context = null;
     var gl = null;
     var frame_count = 0;
@@ -72,7 +76,7 @@
     }
     
     function calcFramerate() {
-      document.getElementById('framerate').innerHTML = "FPS: "+frame_count;
+      document.getElementById('framerate').innerHTML = "FPS: "+(world.framerate || frame_count);
       frame_count = 0;
     }
             
@@ -91,6 +95,17 @@
         mouse.offsety = mouse.y;
         mouse.x = event.clientX - $(self).cumulativeOffset()[0]-1;
         mouse.y = event.clientY - $(self).cumulativeOffset()[1]-1;
+        // add scroll offsets
+        if (window.pageXOffset)
+        {
+          mouse.x += window.pageXOffset;
+          mouse.y += window.pageYOffset;
+        }
+        else
+        { 
+          mouse.x += document.body.scrollLeft;
+          mouse.y += document.body.scrollTop;
+        }
         if (mouse.offsetx)
           mouse.diffx = mouse.x - mouse.offsetx;
         if (mouse.offsety)
@@ -141,6 +156,10 @@
         <%=yield :mouse_released%>
       });
     }
+          
+    Event.observe("body", "load", function() {
+      
+    });
   </script>
   
   <style>
@@ -162,8 +181,8 @@
       <br/>
       <%=link_to "Thoughts in Computation", "http://thoughtsincomputation.com"%>
     </p><p>
-      Disclaimer: 100% of the code on this site was designed specifically for the Firefox 4.0 beta and hasn't yet been
-      tested with any other browser. That means it'll almost certainly NOT work with any other browser.
+      Although designed for Firefox, all demos have been tested with Chrome and Safari. Be sure to use a WebGL-enabled
+      browser or they'll fail.
     </p>
   </body>
 </html>

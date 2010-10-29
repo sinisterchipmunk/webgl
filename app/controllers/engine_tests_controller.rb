@@ -54,9 +54,11 @@ class EngineTestsController < ApplicationController
   end
   
   def particles
-    dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d' << 'objects/particle'
+    dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d'
+#    << 'objects/particle'
+    dependencies << "systems/particle_generator"
     world.camera.position = [0,0,10]
-    world << WebGL::Particles::Generator.new
+#    world << WebGL::Particles::Generator.new
   end
   
   def multi_canvas

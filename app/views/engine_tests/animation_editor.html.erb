@@ -26,9 +26,15 @@
   <%end%>
   
   <script type="text/javascript">
+    // this is used to disable context.checkError(), which is slow.
+    // it may be worth noting that context.checkError() is particularly
+    // slow on Chrome (~4fps for this page); FF gets a much better
+    // framerate (40+).
+    var RELEASE = true;
+    
     var MODE='edit';
     logger.level = Logger.DEBUG;
-    var front = null, left = null, top = null, skeleton = null;
+    var front = null, left = null, topContext = null, skeleton = null;
     var gl = null;
     var frame_count = 0;
     var world;
@@ -41,7 +47,8 @@
       logger.attempt("webGLStart", function() {
         front = new WebGLContext('canvas-front', <%=shaders.to_json%>);
         left  = new WebGLContext('canvas-left',  <%=shaders.to_json%>);
-        top   = new WebGLContext('canvas-top',   <%=shaders.to_json%>);
+        topContext   = new WebGLContext('canvas-top',   <%=shaders.to_json%>);
+
         skeleton = new Skeleton({
           "scale": 1,   // scale the size of the skeleton
           "timeScale": 1, // timeScale 1 means we won't alter the duration of each keyframe
@@ -108,27 +115,27 @@
           }
         };
         front.world.addObject(skeleton);
-        top.world.addObject(skeleton);
+        topContext.world.addObject(skeleton);
         left.world.addObject(skeleton);
         
         front.world.addObject(spheres);
-        top.world.addObject(spheres);
+        topContext.world.addObject(spheres);
         left.world.addObject(spheres);
         
         // FIXME why doesn't picking work in ortho mode?
         front.world.camera.ortho(front, {unit:true});
-        top.world.camera.ortho(top, {unit:true,left:-0.25,right:0.25});
+        topContext.world.camera.ortho(topContext, {unit:true,left:-0.25,right:0.25});
         left.world.camera.ortho(left, {unit:true});
         
         front.world.camera.move(-2);
-        top.world.camera.translateTo(0, 1, 0);
-        top.world.camera.orient([0,-1,0], [0,0,-1], [1,0,0]);
+        topContext.world.camera.translateTo(0, 1, 0);
+        topContext.world.camera.orient([0,-1,0], [0,0,-1], [1,0,0]);
         left.world.camera.translateTo(-2, 0, 0);
         left.world.camera.orient([1,0,0],[0,1,0],[0,0,1]);
         
         if ($('logger')) $('logger').update(logger);
         
-        var contexts = {front:front, top:top, left:left};
+        var contexts = {front:front, top:topContext, left:left};
         for (i in contexts)
         {
           var canvas = contexts[i].canvas;
@@ -163,7 +170,7 @@
     }
     
     function calcFramerate() {
-      frame_count = (front.world.framerate + left.world.framerate + top.world.framerate) / 3;
+      frame_count = (front.world.framerate + left.world.framerate + topContext.world.framerate) / 3;
       if (isNaN(frame_count)) frame_count = "Calculating...";
       else frame_count = parseInt(frame_count);
       
