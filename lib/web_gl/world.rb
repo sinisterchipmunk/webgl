@@ -19,6 +19,7 @@ class WebGL::World
   end
   
   attr_reader :objects, :camera
+  attr_accessor :scene
   delegate :<<, :to => :objects
   
   def initialize
@@ -31,6 +32,11 @@ class WebGL::World
     if camera.changed?
       js.concat "#{camera.js_orient('world.camera')};"
     end
+    
+    if @scene
+      js.concat "world.scene = (#{@scene.to_js});"
+    end
+    
     #objects.each { |obj| js.concat "world.addObject(#{obj.to_js});" }
     objects.each { |obj| js.concat obj.to_js("function(obj) { world.addObject(obj); }") }
     js.concat "return world;"

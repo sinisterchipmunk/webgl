@@ -238,6 +238,7 @@ WebGLContext.identifier = 0;
   window.GL_FRAMEBUFFER = context.gl.FRAMEBUFFER;
   window.GL_DEPTH_COMPONENT = context.gl.DEPTH_COMPONENT || context.gl.DEPTH_COMPONENT16;
   window.GL_DEPTH_COMPONENT16 = context.gl.DEPTH_COMPONENT16;
+  window.GL_BLEND = context.gl.BLEND;
   window.GL_TEXTURES = [];
   for (i = 0; i < 32; i++) window.GL_TEXTURES[i] = context.gl["TEXTURE"+i];
   

@@ -1,43 +1,68 @@
 <script>
 <%content_for :global do %>
   var heightMap;
+  var selectedCreature = null;
+  var selectionQuad = null;
 
   function updateKeyboardInput()
   {
-    var rotation = [0,0,0];
-    var translation = [0,0,0];
-    var movement_speed = 1.5; // in GL units per second
-    var rotation_speed = 0.5;
-    var strafing_speed = 1.0;
-      
-    movement_speed *= 0.75; // because that's the delay between frames (via setInterval, above)
-    rotation_speed *= 0.15; // in an offline app we'd calculate time elapsed between frames.
-    strafing_speed *= 0.15;
-      
-    if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
-    if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
-    if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
-    if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
-    if (currentlyPressedKeys[87]) translation[2] -= 1; // W
-    if (currentlyPressedKeys[83]) translation[2] += 1; // S
-    if (currentlyPressedKeys[65]) translation[0] -= 1; // A
-    if (currentlyPressedKeys[68]) translation[0] += 1; // D
-      
-    world.camera.move(movement_speed, translation);
-    //camera.rotateView(rotation[0], rotation[1], 0);
+    logger.attempt("update keyboard input", function() {
+      var rotation = 0;
+      var translation = [0,0,0];
+      var movement_speed = 1.5; // in GL units per second
+      var rotation_speed = 0.5;
+      var strafing_speed = 1.0;
+        
+      movement_speed *= 0.75; // because that's the delay between frames (via setInterval, above)
+      rotation_speed *= 0.15; // in an offline app we'd calculate time elapsed between frames.
+      strafing_speed *= 0.15;
+        
+      if (currentlyPressedKeys[38]) rotation += rotation_speed; // arrow up
+      if (currentlyPressedKeys[40]) rotation -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[87]) translation[2] -= 1; // W
+      if (currentlyPressedKeys[83]) translation[2] += 1; // S
+      if (currentlyPressedKeys[65]) translation[0] -= 1; // A
+      if (currentlyPressedKeys[68]) translation[0] += 1; // D
+        
+      world.camera.move(movement_speed, translation);
+      var position = world.camera.getPosition(), view = world.camera.getView();
+      // this condition pegs the camera rotation so the user can't rotate
+      // to inappropriate views (below the terrain, upside down, etc.)
+      // Keep in mind that this is a totally unacceptable technique if
+      // the camera is to rotate in other directions (for instance, to look left).
+      if ((rotation > 0 && view[1] <= -0.521 && view[2] >= -0.853) ||
+          (rotation < 0 && view[1] >= -0.98  && view[2] <= -0.196))
+      {
+        world.camera.rotateView(rotation, 0, 0);
+
+        // we need to project along the [y,z] view vector from the camera's position
+        // some set focal distance. We can't just use the camera's distance from the origin
+        // (which would be its current position) because that can change by camera movement,
+        // which causes some very bizarre camera issues indeed.
+        window.predefined_distance = window.predefined_distance || [75, 42];
+        position[1] -= predefined_distance[0];
+        position[2] -= predefined_distance[1];
+        
+        var theta = rotation;
+        var y = predefined_distance[0], z = predefined_distance[1];
+        predefined_distance[0] = y*Math.cos(theta) - z*Math.sin(theta);
+        predefined_distance[1] = y*Math.sin(theta) + z*Math.cos(theta);
+        
+        position[1] += predefined_distance[0];
+        position[2] += predefined_distance[1];
+        world.camera.look();
+      }
+    });
   }
 <%end%>
 
 <%content_for :init do%>
-  var img = new Image();
-  img.onload = function() {
-    heightMap = new HeightMap(img, {magnitude:4});
-    world.addObject(heightMap);
-    context.checkError();
-    heightMap.addTexture("/images/textures/poormansgrass.png", {scale:3});
-    context.checkError();
-  };
-  img.src = "/images/height.png";
+  selectionQuad = new Quad(1,1);
+  selectionQuad.orientation.setPosition(0,0,-10);
+  selectionQuad.orientation.orient([0,1,0],[0,0,1],[1,0,0],[0,20,0]);
+  selectionQuad.orientation.look();
+  selectionQuad.texture = new Texture("/images/selection.png");
+  selectionQuad.shader = 'color_with_texture';
 
   world.camera.moveTo(35, 75, 42);
   world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
@@ -47,6 +72,26 @@
 
 <%content_for :render do%>
   world.render();
+  if (selectedCreature)
+  {
+    // update quad position because the creature may have moved
+    var pos = selectedCreature.orientation.getPosition();
+    selectionQuad.orientation.setPosition(pos[0], pos[1]+selectedCreature.lowest_point+1, pos[2]);
+
+  }
+world.context.gl.enable(GL_BLEND);
+world.context.gl.blendFunc(GL_LEQUAL);
+world.camera.look(world.context.gl);
+selectionQuad.render(world.context);
+world.context.gl.disable(GL_BLEND);
+<%end%>
+        
+<%content_for :mouse_pressed do%>
+  selectedCreature = world.pick(mouse.x, mouse.y);
+  if (selectedCreature)
+  {
+    selectionQuad.setSize(selectedCreature.size_x, selectedCreature.size_z);
+  }
 <%end%>
 </script>
 

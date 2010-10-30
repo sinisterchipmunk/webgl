@@ -24,11 +24,20 @@ class EngineTestsController < ApplicationController
   end
   
   def interface
-    dependencies << 'engine/heightmap' << "objects/md2"
-#    Creature.all.each do |creature|
-#      creature.scale = 0.25
-#      world << creature
-#    end
+    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad"
+    scene = HeightMap.new("/images/height.png",
+                          :texture => { :path => "/images/textures/poormansgrass.png", :scale => 3 },
+                          :magnitude => 4)
+    
+    # set the height map as the world scene
+    world.scene = scene
+    
+    # add one of each Creature to the world.
+    Creature.all.each_with_index do |creature, index|
+      creature.scale = 0.25
+      creature.position = [(index+1)*10,0,(index+1) *10]
+      world << creature
+    end
   end
   
   def picking

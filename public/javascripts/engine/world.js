@@ -59,6 +59,7 @@ World.prototype = {
       }
       
       this.camera.look(this.context.gl);
+      if (this.scene) this.scene.render(this.context, mode);
       this.renderObjects(mode);
     mvPopMatrix();
   },
@@ -70,10 +71,18 @@ World.prototype = {
   },
   
   addObject: function(object) {
+    var self = this;
+    object.orientation.callbacks.position_changed = function(newPosition, oldPosition) {
+      if (self.scene) self.scene.updateObjectPosition(self, object, newPosition, oldPosition);
+    };
     this.objects[object.object_id] = object;
+    // finally, explicitly fire the callback to ensure the object is in the right place
+    var position = object.orientation.getPosition();
+    object.orientation.callbacks.position_changed(position, position);
   },
   
   removeObject: function(object) {
+    object.orientation.callbacks.position_changed = null;
     this.objects[object.object_id] = null;
   },
   

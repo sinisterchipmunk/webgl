@@ -53,6 +53,7 @@ var Renderable = function() {
     initialize: function(init_func, update_func)
     {
       var self = this;
+      self.after_render_queue = [];
       self.object_id = ++Renderable.identifier;
       Renderable.all.push(self);
       
@@ -167,6 +168,13 @@ var Renderable = function() {
       return (this.built && this.built[context.id]);
     },
     
+    rebuildAll: function() { this.built = {}; },
+    
+    bottom: function() {
+      var normal = -this.orientation.getUp();
+      return normal.times(this.lowest_point);
+    },
+    
     render: function(context, mode) {
       var self = this;
       logger.attempt('Renderable#render', function() {
@@ -231,6 +239,9 @@ var Renderable = function() {
             
         mvPopMatrix();
 //        context.checkError();
+        
+        for (var i = self.after_render_queue.length-1; i >= 0; i--)
+          self.after_render_queue.pop()();
       });
     },
     
@@ -260,10 +271,14 @@ var Renderable = function() {
       }
     },
     
+    after_render: function(func) {
+      this.after_render_queue.push(func);
+    },
+    
     rebuild: function(context) {
       var self = this;
       logger.attempt("Renderable#rebuild", function() {
-        if (!context) throw new Error("Can't render without a context!");
+        if (!context) throw new Error("Can't rebuild without a context!");
         self.dispose(context);
         var gl = context.gl;
         self.DRAW_MODE = self.DRAW_MODE || GL_TRIANGLES;
@@ -284,7 +299,28 @@ var Renderable = function() {
           else ; // color isn't explicitly set, but color vertices exist, so use them.
         }
         
-        if (vertices.length > 0)      self.setGLVertexBuffer(context, new VertexBuffer(context, vertices));
+        if (vertices.length > 0)
+        {
+          self.setGLVertexBuffer(context, new VertexBuffer(context, vertices));
+          var i;
+          var minx = null, maxx = null, miny = null, maxy = null, minz = null, maxz = null;
+          
+          for (i = 0; i < vertices.length; i += 3)
+            if (minx == null || vertices[i] < minx) minx = vertices[i];
+            else if (maxx == null || vertices[i] > maxx) maxx = vertices[i];
+          for (i = 1; i < vertices.length; i += 3) {
+            if (miny == null || vertices[i] < miny) miny = vertices[i];
+            else if (maxy == null || vertices[i] > maxy) maxy = vertices[i];
+            if (typeof(self.lowest_point) == "undefined" || vertices[i] < self.lowest_point)
+              self.lowest_point = vertices[i];
+          }
+          for (i = 2; i < vertices.length; i += 3)
+            if (minz == null || vertices[i] < minz) minz = vertices[i];
+            else if (maxz == null || vertices[i] > maxz) maxz = vertices[i];
+          self.size_x = maxx - minx;
+          self.size_y = maxy - miny;
+          self.size_z = maxz - minz;
+        }
         if (colors.length > 0)        self.setGLColorBuffer(context,  new ColorBuffer(context, colors));
         if (indices.length > 0)       self.setGLIndexBuffer(context,  new ElementArrayBuffer(context, indices));
         if (normals.length > 0)       self.setGLNormalBuffer(context, new NormalBuffer(context, normals));

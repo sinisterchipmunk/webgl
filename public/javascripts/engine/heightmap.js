@@ -18,6 +18,7 @@
 var HeightMap = function() {
   // private helper function for iterating through all vertices (in the order they will be rendered)
   function each_vertex(self, callback) {
+    if (!self.image) return;
     var x, z;
     for (x = 0; x < self.width(); x += 1)
     {
@@ -61,14 +62,37 @@ var HeightMap = function() {
   
   return Class.create(Renderable, {
     initialize: function($super, image, options) {
+      var self = this;
       options = options || {};
     
-      this.image = image;
       this.magnitude = options.magnitude || 1;
       this.scale  = options.scale  || 1;
-      buildData(this); // force an immediate build of this.data
+      
+      var img = new Image();
+      img.onload = function() {
+        self.image = img;
+        self.rebuildAll();
+      };
+      img.src = image;
     
       $super();
+    },
+    
+    updateObjectPosition: function(world, object, oldPosition, newPosition) {
+      var self = this;
+      
+      if (object.lowest_point)
+      {
+        // TODO extrapolate this along up, right and view vectors. object.bottom() may be of some help for that.
+        if (newPosition[0] < 0) newPosition[0] = 0;
+        if (newPosition[0] > this.width()) newPosition[0] = this.width();
+        if (newPosition[2] < 0) newPosition[2] = 0;
+        if (newPosition[2] > this.depth()) newPosition[0] = this.depth();
+        newPosition[1] = this.height(newPosition[0], newPosition[2])*this.scale - object.lowest_point;
+      }
+      else
+        // not available? means vertex data hasn't initialized yet; need to retry after render.
+        this.after_render(function() { self.updateObjectPosition(world, object, oldPosition, newPosition); });
     },
     
     lowest:  function() { return this.data.lowest;  },
@@ -81,9 +105,11 @@ var HeightMap = function() {
       return this.data.map[z * this.width() + x] * this.magnitude;
     },
     
+    setMagnitude: function(mag) {  },
+    
     init: function(vertices, colors, textureCoords, normals, indices) {
       var y, self = this;
-      buildData(self); // because image data may have changed. TODO don't do this if image / options haven't changed
+      if (self.image) buildData(self); // TODO don't do this if image / options haven't changed
       
       self.DRAW_MODE = GL_TRIANGLE_STRIP;
         

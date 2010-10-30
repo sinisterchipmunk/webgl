@@ -15,6 +15,7 @@ function Camera(options)
   var pmatrix = null;
   matrix.setLookAt(position, view, up, right);
   
+  self.callbacks = {};
   self.lock_up_vector = options.lock_up_vector || default_options.lock_up_vector;
   self.lock_y_axis    = options.lock_y_axis    || default_options.lock_y_axis;
 
@@ -27,6 +28,7 @@ function Camera(options)
   
   self.setPosition = function(vec, y, z) {
     if (typeof(vec) == "number") vec = [vec, y, z];
+    if (self.callbacks && self.callbacks.position_changed) self.callbacks.position_changed(position, vec);
     position = vec;
     return self;
   };
@@ -36,6 +38,7 @@ function Camera(options)
     view  = vec.normalize();
     right = view.cross(up).normalize();
     up    = right.cross(view).normalize();
+    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
   
@@ -44,6 +47,7 @@ function Camera(options)
     up = vec.normalize();
     right = view.cross(up).normalize();
     view = up.cross(right).normalize();
+    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
   
@@ -52,6 +56,7 @@ function Camera(options)
     right = vec.normalize();
     view = up.cross(right).normalize();
     up = right.cross(view).normalize();
+    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
   
@@ -195,6 +200,7 @@ Camera.prototype.rotateView = function(amount_x, amount_y, amount_z) {
   
   this.orient(view, up, right);
   this.look();
+  if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
   return this;
 };
 
