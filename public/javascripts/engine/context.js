@@ -239,6 +239,15 @@ WebGLContext.identifier = 0;
   window.GL_DEPTH_COMPONENT = context.gl.DEPTH_COMPONENT || context.gl.DEPTH_COMPONENT16;
   window.GL_DEPTH_COMPONENT16 = context.gl.DEPTH_COMPONENT16;
   window.GL_BLEND = context.gl.BLEND;
+  window.GL_LEQUAL = context.gl.LEQUAL;
+  window.GL_SRC_ALPHA = context.gl.SRC_ALPHA;
+  window.GL_SRC_COLOR = context.gl.SRC_COLOR;
+  window.GL_ONE_MINUS_SRC_ALPHA = context.gl.ONE_MINUS_SRC_ALPHA;
+  window.GL_ZERO = context.gl.ZERO;
+  window.GL_ONE = context.gl.ONE;
+  window.GL_DEST_ALPHA = context.gl.DEST_ALPHA;
+  window.GL_DEST_COLOR = context.gl.DEST_COLOR;
+  window.GL_ONE_MINUS_DEST_ALPHA = context.gl.ONE_MINUS_DEST_ALPHA;
   window.GL_TEXTURES = [];
   for (i = 0; i < 32; i++) window.GL_TEXTURES[i] = context.gl["TEXTURE"+i];
   

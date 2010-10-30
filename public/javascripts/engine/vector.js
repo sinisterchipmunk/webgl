@@ -19,7 +19,7 @@ Array.prototype._vectorize = function(other, y, z, w) {
     for (i = 0; i < this.length; i++) result[i] = other[0];
   else if (other.length == this.length)
     for (i = 0; i < this.length; i++) result[i] = other[i];
-  else throw new Error("Argument must be a scalar value or a vector of equal length; received "+other.toSource()+" for "+this.toSource());
+  else throw new Error("Argument must be a scalar value or a vector of equal dimensions; received "+other.toSource()+" for "+this.toSource());
 
   return result;
 };

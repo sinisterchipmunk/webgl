@@ -24,7 +24,12 @@ var Renderable = function() {
       coords.push(self.originalTextureCoords[i]*descriptor.scaleX, self.originalTextureCoords[i+1]*descriptor.scaleY);
 
     if (coords.length != 0)
+    {
+      context.checkError();
       descriptor.buffers[context.id] = new TextureCoordsBuffer(context, coords);
+      context.checkError();
+      descriptor.buffers[context.id].valid = true;
+    }
   }
   
   function disposeBuffer(self, name, context)
@@ -168,7 +173,7 @@ var Renderable = function() {
       return (this.built && this.built[context.id]);
     },
     
-    rebuildAll: function() { this.built = {}; },
+    rebuildAll: function() { this.invalidate(); },
     
     bottom: function() {
       var normal = -this.orientation.getUp();
@@ -180,7 +185,8 @@ var Renderable = function() {
       logger.attempt('Renderable#render', function() {
         // make sure everything's up to date.
         if (self.texture && self.texture != self.textures[0]) self.setTexture(0, self.texture);
-        if (!self.isBuiltFor(context))                        self.rebuild(context);
+        if (!self.isBuiltFor(context))
+          self.rebuild(context);
         
         
         // get the related buffers.
@@ -209,12 +215,15 @@ var Renderable = function() {
             var descriptor = self.textures[i];
             if (descriptor)
             {
-              if (!descriptor.buffers[context.id])
+              if (!descriptor.buffers[context.id] || !descriptor.buffers[context.id].valid)
                 buildTexture(self, context, descriptor);
               
               context.gl.activeTexture(GL_TEXTURES[i]);
-              if (!descriptor.texture || !descriptor.texture.bind) alert(descriptor.texture.toSource());
+              context.checkError();
+
               descriptor.texture.bind(context);
+              context.checkError();
+              
               shader.uniform("texture"+i, "uniform1i").value = i;
               shader.setAttribute("texture"+i+"coords", descriptor.buffers[context.id]);
             }
@@ -259,7 +268,10 @@ var Renderable = function() {
         for (var i = 0; i < self.textures.length; i++)
           for (var bufname in self.textures[i].buffers)
             if (self.textures[i].buffers[bufname])
+            {
               self.textures[i].buffers[bufname].dispose();
+              self.textures[i].buffers[bufname].valid = false;
+            }
       });
     },
     
@@ -283,21 +295,26 @@ var Renderable = function() {
         var gl = context.gl;
         self.DRAW_MODE = self.DRAW_MODE || GL_TRIANGLES;
         self.built[context.id] = context;
+        context.checkError();
   
         var vertices = [], colors = [], textureCoords = [], normals = [], indices = [];
         if (self.init) self.init(vertices, colors, textureCoords, normals, indices);
+        context.checkError();
         if (self.color) // something has already set the color
         {
           colors = setColorCoords(self, vertices.length / 3, self.color);
+          context.checkError();
         }
         else if (colors.length == 0) // color isn't set, and user didn't set any during init()
         {
           if (!self.getGLColorBuffer(context)) // and none are already set
           {
             colors = setColorCoords(self, vertices.length / 3, [1,1,1,1]);
+            context.checkError();
           }
           else ; // color isn't explicitly set, but color vertices exist, so use them.
         }
+        context.checkError();
         
         if (vertices.length > 0)
         {
@@ -324,14 +341,18 @@ var Renderable = function() {
         if (colors.length > 0)        self.setGLColorBuffer(context,  new ColorBuffer(context, colors));
         if (indices.length > 0)       self.setGLIndexBuffer(context,  new ElementArrayBuffer(context, indices));
         if (normals.length > 0)       self.setGLNormalBuffer(context, new NormalBuffer(context, normals));
+        context.checkError();
         self.originalTextureCoords = textureCoords;
         
         // After the object has been built, we need to iterate through any textures that may have been registered
         // with it, and rebuild those too.
         for (var i = 0; i < self.textures.length; i++)
           if (self.textures[i])
+          {
             self.setTexture(i, self.textures[i].texture, self.textures[i]);
-        
+            context.checkError();
+          }
+            
         var previousUpdate = new Date();
         if (self.updateInterval) clearInterval(self.updateInterval);
         self.updateInterval = setInterval(function() {

@@ -22,14 +22,21 @@ var Buffer = Class.create({
   },
   
   refresh: function() {
-    if (this.classTypeInstance)
-      for (var i = 0; i < this.js.length; i++)
-        this.classTypeInstance[i] = this.js[i];
-    else
-      this.classTypeInstance = new this.classType(this.js);
+    if (!this.buffer) this.rebuild();
     
-    this.context.gl.bindBuffer(this.bufferType, this.buffer);
-    this.context.gl.bufferData(this.bufferType, this.classTypeInstance, this.drawType);
+    var self = this;
+    logger.attempt("buffer#refresh", function() {
+      if (self.classTypeInstance)
+        for (var i = 0; i < self.js.length; i++)
+          self.classTypeInstance[i] = self.js[i];
+      else
+        self.classTypeInstance = new self.classType(self.js);
+      
+      self.context.gl.bindBuffer(self.bufferType, self.buffer);
+      context.checkError();
+      self.context.gl.bufferData(self.bufferType, self.classTypeInstance, self.drawType);
+      context.checkError();
+    });
   },
   
   dispose: function() {

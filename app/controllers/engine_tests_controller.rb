@@ -24,7 +24,7 @@ class EngineTestsController < ApplicationController
   end
   
   def interface
-    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad"
+    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line";
     scene = HeightMap.new("/images/height.png",
                           :texture => { :path => "/images/textures/poormansgrass.png", :scale => 3 },
                           :magnitude => 4)
