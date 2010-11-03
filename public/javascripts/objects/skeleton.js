@@ -82,15 +82,10 @@ var Skeleton = function() {
       // also exposes the current frame to the outside.
       snapshot(self, self.snapshot);
       
-      for (var id in self.buffers) {
-        if (self.buffers[id])
-        {
-          var vertexBuffer = self.buffers[id]['vertices'];
-          for (var i = 0; i < self.snapshot.length; i++)
-            vertexBuffer.js[i] = self.snapshot[i];
-          vertexBuffer.refresh();
-        }
-      }      
+      var vertexBuffer = self.mesh.getVertexBuffer();
+      for (var i = 0; i < self.snapshot.length; i++)
+        vertexBuffer.js[i] = self.snapshot[i];
+      vertexBuffer.refresh();
     });
   }
   

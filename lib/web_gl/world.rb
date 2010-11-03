@@ -37,8 +37,8 @@ class WebGL::World
       js.concat "world.scene = (#{@scene.to_js});"
     end
     
-    #objects.each { |obj| js.concat "world.addObject(#{obj.to_js});" }
-    objects.each { |obj| js.concat obj.to_js("function(obj) { world.addObject(obj); }") }
+    objects.each { |obj| js.concat "world.addObject(#{obj.to_js});" }
+#    objects.each { |obj| js.concat obj.to_js("function(obj) { world.addObject(obj); }") }
     js.concat "return world;"
     js.concat "})()"
     

@@ -8,7 +8,7 @@ var ParticleGenerator = function() {
     if (!particle)
     {
       particle = new Quad(size, size);
-      particle.setColor([Math.random(),Math.random(),Math.random(),Math.random()]);
+      particle.mesh.setColor([Math.random(),Math.random(),Math.random(),Math.random()]);
     }
     var position = [self.options.position[0], self.options.position[1], self.options.position[2]];
     for (i = 0; i < 3; i++)
@@ -69,7 +69,7 @@ var ParticleGenerator = function() {
     },
     
     render: function(context, mode) {
-      if (!this.isBuiltFor(context)) { this.rebuild(context); }
+      if (!this.mesh.isBuiltFor(context)) { this.rebuild(context); }
       for (var i = 0; i < this.particles.length; i++)
         if (this.particles[i])
           this.particles[i].render(context, mode);

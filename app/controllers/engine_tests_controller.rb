@@ -24,7 +24,9 @@ class EngineTestsController < ApplicationController
   end
   
   def interface
-    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line";
+    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line" << "models/actor" <<
+            "models/creature" << "models/ai";
+    
     scene = HeightMap.new("/images/height.png",
                           :texture => { :path => "/images/textures/poormansgrass.png", :scale => 3 },
                           :magnitude => 4)
@@ -59,11 +61,13 @@ class EngineTestsController < ApplicationController
   def ruby_layer
     #objects << WebGL::Quad.new(1, 1)
     objects << WebGL::Sphere.new(0.5)
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+            "objects/renderable"
   end
   
   def renderable
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable" << "tests/engine/renderable"
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+            "objects/renderable" << "tests/engine/renderable"
   end
   
   def particles
@@ -75,7 +79,8 @@ class EngineTestsController < ApplicationController
   end
   
   def multi_canvas
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' << "objects/renderable"
+    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+            "objects/renderable"
   end
   
   def skeleton
@@ -88,6 +93,24 @@ class EngineTestsController < ApplicationController
   
   def md2
     dependencies << 'objects/md2' << 'tests/objects/md2'
+  end
+  
+  def creatures
+    dependencies << "models/creature" << "objects/md2" << "engine/animation" << "models/actor" << "models/creature"
+    
+    world.camera.position = [0,0,10]
+    
+    ogro1 = Creature.find_by_name("Demo - Ogro") || raise("Couldn't find first Ogro instance!")
+    ogro2 = Creature.find_by_name("Ogro 2") || raise("Couldn't find second Ogro instance!")
+    
+    ogro1.orientation.position = [-1.5,0,0] # note that this could just be saved in the db. I don't because I'm generating
+    ogro2.orientation.position = [ 1.5,0,0] # different positions depending on the controller action. Yay for flexibility :)
+    
+    ogro1.scale = 0.05 # ditto the above
+    ogro2.scale = 0.05
+    
+    world << ogro1
+    world << ogro2
   end
   
   private

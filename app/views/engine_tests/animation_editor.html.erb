@@ -18,6 +18,7 @@
   <script type="text/javascript" src="/javascripts/engine/context.js"></script>
   <script type="text/javascript" src="/javascripts/engine/buffer.js"></script>
   <script type="text/javascript" src="/javascripts/engine/texture.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/mesh.js"></script>
   <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
   <script type="text/javascript" src="/javascripts/objects/skeleton.js"></script>
   <script type="text/javascript" src="/javascripts/objects/sphere.js"></script>
@@ -91,8 +92,10 @@
         var sphere = new Sphere({radius:0.0125,stacks:8,slices:8});
         var spheres = new Renderable();
         var pickShaders = {};
-        
-        spheres.render = function(context, mode) {
+
+        spheres.render = function(options) {
+          var context = options.context;
+          var mode = options.mode;
           if (skeleton.snapshot)
           {
             for (var id in skeleton.all) 
@@ -104,16 +107,40 @@
               var i = skeleton.all[id].index;
               sphere.orientation.setPosition(skeleton.snapshot[i*3], skeleton.snapshot[i*3+1], skeleton.snapshot[i*3+2]);
               if (mode == RENDER_PICK)
-                sphere.shader = pickShaders[id][context.id];
+                options.shader = pickShaders[id][context.id];
               else
-                if (selected_bone == id) sphere.shader = 'test_red';
-                else if (highlighted_bone == id) sphere.shader = 'test_orange';
-                else sphere.shader = null;
+                if (selected_bone == id) options.shader = 'test_red';
+                else if (highlighted_bone == id) options.shader = 'test_orange';
+                else options.shader = null;
               sphere.object_id = id;
-              sphere.render(context);
+//              options.shader = sphere.shader;
+              sphere.render(options);
             }
           }
         };
+//        spheres.render = function(options) {
+//          if (skeleton.snapshot)
+//          {
+//            for (var id in skeleton.all) 
+//            {
+//              if (id == "length") continue;
+//              if (!pickShaders[id]) pickShaders[id] = {};
+//              if (!pickShaders[id][options.context.id])
+//                pickShaders[id][options.context.id] = new Renderable.PickShader(options.context, id).shader;
+//              
+//              var i = skeleton.all[id].index;
+//              sphere.orientation.setPosition(skeleton.snapshot[i*3], skeleton.snapshot[i*3+1], skeleton.snapshot[i*3+2]);
+//              if (options.mode == RENDER_PICK)
+//                sphere.shader = pickShaders[id][options.context.id];
+//              else
+//                if (selected_bone == id) sphere.shader = 'test_red';
+//                else if (highlighted_bone == id) sphere.shader = 'test_orange';
+//                else sphere.shader = null;
+//              sphere.object_id = id;
+//              sphere.render(options);
+//            }
+//          }
+//        };
         front.world.addObject(skeleton);
         topContext.world.addObject(skeleton);
         left.world.addObject(skeleton);
@@ -201,6 +228,7 @@
           mouse.diffy = mouse.y - mouse.offsety;
   
         highlighted_bone = mouse.target.context.world.pickIndex(mouse.x, mouse.y);
+        
         
         if (mouse.down == null) {
           //mouse moved

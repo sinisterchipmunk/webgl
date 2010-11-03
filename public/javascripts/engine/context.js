@@ -37,7 +37,10 @@ var WebGLContext = function() {
       this.shaders = shaders || [];
       this.world = new World(this);
       
-      if (shaders) for (var i in shaders) { shaders[i].context = this; }
+      if (shaders)
+        for (var i in shaders) {
+          shaders[i].context = this;
+        }
       
       logger.info("WebGL context created for "+this.canvas.id);
       this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -49,7 +52,7 @@ var WebGLContext = function() {
       this.startRendering(render_func);
     },
     
-    createShader: function(name) {
+    buildShader: function(name) {
       var shader = new Shader();
       shader.context = this;
       if (name) shaders[name] = shader;
@@ -203,51 +206,54 @@ WebGLContext.identifier = 0;
     body = document.createElement('body');
     document.getElementsByTagName("html")[0].appendChild(body);
   }
-  document.getElementsByTagName("body")[0].appendChild(canvas);
-//  alert(document.root);
-//  document.root.appendChild(canvas);
-  var context = new WebGLContext(canvas);
-  context.stopRendering();
+  document.getElementsByTagName("body")[0].appendChild(canvas);  
   
-  /* define the GL enums globally so we don't need a context to reference them */
-  window.GL_UNSIGNED_BYTE = context.gl.UNSIGNED_BYTE;
-  window.GL_FLOAT = context.gl.FLOAT;
-  window.GL_TEXTURE_2D = context.gl.TEXTURE_2D;
-  window.GL_FRAGMENT_SHADER = context.gl.FRAGMENT_SHADER;
-  window.GL_VERTEX_SHADER = context.gl.VERTEX_SHADER;
-  window.GL_COLOR_BUFFER_BIT = context.gl.COLOR_BUFFER_BIT;
-  window.GL_DEPTH_BUFFER_BIT = context.gl.DEPTH_BUFFER_BIT;
-  window.GL_TRIANGLE_STRIP = context.gl.TRIANGLE_STRIP;
-  window.GL_TRIANGLES = context.gl.TRIANGLES;
-  window.GL_LINE_STRIP = context.gl.LINE_STRIP;
-  window.GL_LINES = context.gl.LINES;
-  window.GL_ELEMENT_ARRAY_BUFFER = context.gl.ELEMENT_ARRAY_BUFFER;
-  window.GL_TEXTURE0 = context.gl.TEXTURE0;
-  window.GL_UNSIGNED_SHORT = context.gl.UNSIGNED_SHORT;
-  window.GL_RGB = context.gl.RGB;
-  window.GL_RGBA = context.gl.RGBA;
-  window.GL_TEXTURE_MAG_FILTER = context.gl.TEXTURE_MAG_FILTER;
-  window.GL_LINEAR = context.gl.LINEAR;
-  window.GL_LINEAR_MIPMAP_NEAREST = context.gl.LINEAR_MIPMAP_NEAREST;
-  window.GL_TEXTURE_MIN_FILTER = context.gl.TEXTURE_MIN_FILTER;
-  window.GL_ARRAY_BUFFER = context.gl.ARRAY_BUFFER;
-  window.GL_STATIC_DRAW = context.gl.STATIC_DRAW;
-  window.GL_STREAM_DRAW = context.gl.STREAM_DRAW;
+  var context = new WebGLContext(canvas);
+  context.stopRendering(); // we don't need or want to draw stuff
+  
+  /* add methods to Context prototype to auto check for errors. */
+  for (var method_name in context.gl)
+  {
+    if (typeof(context.gl[method_name]) == "function")
+    {
+      var args = "";
+      for (var arg = 0; arg < context.gl[method_name].length; arg++)
+      {
+        if (arg > 0) args += ",";
+        args += "arg"+arg;
+      }
+
+      var func = "function() {"
+               + "  var result;"
+               + "  try { "
+               + "    result = this.gl."+method_name+".apply(this.gl, arguments);"
+               + "    this.checkError();"
+               + "  } catch(e) { "
+               + "    var args = [], i;"
+               + "    for (i = 0; i < arguments.length; i++) args.push(arguments[i]);"
+               + "    args = JSON.stringify(args);"
+               + "    if (e.stack || (e = new Error(e.toString())).stack) {"
+               + "      var stack_array = e.stack.split('\\n').reverse();" // reverse because logger shows newest messages first.
+               + "      for (i = 0; i < stack_array.length; i++) logger.error('    '+stack_array[i]);"
+               + "    }"
+               + "    logger.error('WebGL FAILURE: in call to "+method_name+"<"+context.gl[method_name].length+"> with arguments '+args);"
+               + "    throw e;"
+//               + "    logger.attempt('"+method_name+"', function() { throw e; });"
+               + "  }"
+               + "  return result;"
+               + "}";
+
+      WebGLContext.prototype[method_name] = eval("("+func+")");
+    }
+    else
+      /* define the GL enums globally so we don't need a context to reference them */
+      if (!/[a-z]/.test(method_name)) // no lowercase letters
+        window[('GL_'+method_name)] = context.gl[method_name];
+  }
+  
+  // define some values that the iteration above probably didn't catch
   window.GL_MAX_VERTEX_ATTRIBS = context.gl.getParameter(context.gl.MAX_VERTEX_ATTRIBS);
-  window.GL_RENDERBUFFER = context.gl.RENDERBUFFER;
-  window.GL_FRAMEBUFFER = context.gl.FRAMEBUFFER;
   window.GL_DEPTH_COMPONENT = context.gl.DEPTH_COMPONENT || context.gl.DEPTH_COMPONENT16;
-  window.GL_DEPTH_COMPONENT16 = context.gl.DEPTH_COMPONENT16;
-  window.GL_BLEND = context.gl.BLEND;
-  window.GL_LEQUAL = context.gl.LEQUAL;
-  window.GL_SRC_ALPHA = context.gl.SRC_ALPHA;
-  window.GL_SRC_COLOR = context.gl.SRC_COLOR;
-  window.GL_ONE_MINUS_SRC_ALPHA = context.gl.ONE_MINUS_SRC_ALPHA;
-  window.GL_ZERO = context.gl.ZERO;
-  window.GL_ONE = context.gl.ONE;
-  window.GL_DEST_ALPHA = context.gl.DEST_ALPHA;
-  window.GL_DEST_COLOR = context.gl.DEST_COLOR;
-  window.GL_ONE_MINUS_DEST_ALPHA = context.gl.ONE_MINUS_DEST_ALPHA;
   window.GL_TEXTURES = [];
   for (i = 0; i < 32; i++) window.GL_TEXTURES[i] = context.gl["TEXTURE"+i];
   

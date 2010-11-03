@@ -3,7 +3,7 @@
 <%end%>
 
 <%content_for :init do%>
-  setTimeout(function() { quad.texture = '/images/textures/poormansgrass.png'; }, 1000);
+  setTimeout(function() { quad.mesh.texture = '/images/textures/poormansgrass.png'; }, 1000);
 
   world.camera.translateTo(0,0,5);
   world.addObject(quad);

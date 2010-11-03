@@ -1,10 +1,10 @@
 class CreateModelTextures < ActiveRecord::Migration
   def self.up
     create_table :model_textures do |t|
-      t.references :creature
+      t.references :model
       t.references :texture
 
-      t.timestamps
+      #t.timestamps
     end
   end
 

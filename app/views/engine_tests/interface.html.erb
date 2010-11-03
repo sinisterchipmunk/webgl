@@ -1,27 +1,33 @@
 <script>
 <%content_for :global do %>
+//  var RELEASE = true;
   var heightMap;
   var _debug_ray = new Line([0,0,-1],[0,1,-1]);
   var selectedCreature = null;
+  var destination = null;
   var selectionQuad = null;
 
-  /* TODO: seriously, move this to the Camera class. */
+  /* TODO: seriously, move this to the Camera class. And add a dedicated test for it, too. */
   // Converts screen coordinates into a ray segment with one point at the NEAR plane and the other
   // at the FAR plane relative to the camera's current matrices.
   // Code adapted from gluUnproject(), found at http://www.opengl.org/wiki/GluProject_and_gluUnProject_code
   function unproject(winx, winy, winz)
   {
     if (!winx || !winy) { throw new Error("one or both of X / Y is missing"); }
-    
+
     // winz is either 0 (near plane), 1 (far plane) or somewhere in between.
     // if it's not given a value we'll produce coords for both.
     if (typeof(winz) == "number") {
+      winx = parseFloat(winx);
+      winy = parseFloat(winy);
+      winz = parseFloat(winz);
+    
       var inf = [];
       var mm = world.camera.getMatrix(), pm = world.camera.getProjectionMatrix();
       var viewport = [0, 0, world.context.gl.viewportWidth, world.context.gl.viewportHeight];
 
       //Calculation for inverting a matrix, compute projection x modelview; then compute the inverse
-      var A = pm.multiply(mm).inverse();
+      var m = pm.multiply(mm).inverse();
 
       // Transformation of normalized coordinates between -1 and 1
       inf[0]=(winx-viewport[0])/viewport[2]*2.0-1.0;
@@ -30,7 +36,7 @@
       inf[3]=1.0;
 
       //Objects coordinates
-      var out = A.multiply($V(inf)).elements;
+      var out = m.multiply($V(inf)).elements;
       if(out[3]==0.0)
          return null;
 
@@ -100,13 +106,17 @@
   selectionQuad.orientation.setPosition(0,0,-10);
   selectionQuad.orientation.orient([0,1,0],[0,0,1],[1,0,0],[0,20,0]);
   selectionQuad.orientation.look();
-  selectionQuad.texture = new Texture("/images/selection.png");
+  selectionQuad.mesh.texture = new Texture("/images/selection.png");
 //  selectionQuad.shader = 'color_with_texture';
 
   world.camera.moveTo(35, 75, 42);
   world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
 
-  world.addObject(_debug_ray);
+  // need to keep the debug ray separate from the world because
+  // our current implementation of heightmap will reposition
+  // the ray based on the surrounding terrain. This is suboptimal
+  // and needs to be addressed in a more permanent way.
+//  world.addObject(_debug_ray);
       
   setInterval(updateKeyboardInput, 30);
 <%end%>
@@ -115,18 +125,33 @@
   world.context.gl.disable(GL_BLEND);
   world.render();
 
-//  _debug_ray.render(world.context);
+  
+  world.camera.look(world.context.gl);
+  _debug_ray.render(world.context);
 
   if (selectedCreature)
   {
     // update quad position because the creature may have moved
-//    var pos = selectedCreature.orientation.getPosition();
-//    selectionQuad.orientation.setPosition(pos[0], pos[1]+selectedCreature.lowest_point+1, pos[2]);
+    var pos = selectedCreature.orientation.getPosition();
+    selectionQuad.orientation.setPosition(pos[0], pos[1]+selectedCreature.lowest()+1, pos[2]);
 
     world.context.gl.enable(GL_BLEND);
     world.context.gl.blendFunc(GL_SRC_ALPHA, GL_ONE);
-    world.camera.look(world.context.gl);
     selectionQuad.render(world.context);
+    
+    if (destination)
+    {
+      // hardcode timechange to 0.15 -- this is not accurate and not correct.
+      // this belongs in selectedCreature#update
+//      var pos = selectedCreature.orientation.getPosition();
+//      logger.info(destination.toSource()+" "+pos.toSource());
+      
+//      var normal = (destination.minus(pos)).normalize();
+//      selectedCreature.orientation.setPosition(pos.plus(normal.times(0.15)));
+      
+      selectionQuad.orientation.setPosition(destination[0], destination[1], destination[2]);
+      selectionQuad.render(world.context);
+    }
   }
 <%end%>
         
@@ -135,12 +160,105 @@
   if (target)
   {
     selectedCreature = target;
-    selectionQuad.setSize(selectedCreature.size_x, selectedCreature.size_z);
+    destination = null;
+    selectionQuad.setSize(selectedCreature.actor.model.mesh.size_x, selectedCreature.actor.model.mesh.size_z);
   }
   else
   {
-    var result = unproject(mouse.x, mouse.y);
-    logger.info(result.toSource());
+    var ray = unproject(mouse.x, world.context.gl.viewportHeight - mouse.y);
+    _debug_ray.set(ray[0], ray[1]);
+                 
+    // line-segment/triangle collision detection
+    // this belongs...er...somewhere else. (am i really writing a coldet library now??)
+    // adapted from: http://softsurfer.com/Archive/algorithm_0105/algorithm_0105.htm#intersect_RayTriangle%28%29
+    function coldet_segm_tri(segm, tri, I) // coldet_segm_tri([[0,0], [1,0]], [[0,0,0], [0,1,0], [1,0,0]]);
+    {
+      var u = tri[1].minus(tri[0]);
+      var v = tri[2].minus(tri[0]);
+      var n =  u.cross(v);
+      if (n[0] == 0 && n[1] == 0 && n[2] == 0) //triangle is degenerate
+        return -1;                             // do not deal with this case
+      
+      var dir = segm[1].minus(segm[0]); // ray direction vector
+      var w0 = segm[0].minus(tri[0]);
+      var a = -(n.dot(w0));
+      var b = n.dot(dir);
+      if (Math.abs(b) < Math.EPSILON) // ray is parallel to triangle plane
+        if (a == 0)                   // ray lies in triangle plane
+          return 2;
+        else return 0;                // ray disjoint from plane
+      
+      // get intersect point of ray with triangle plane
+      var r = a / b;
+      if (r < 0.0) // ray goes away from triangle
+        return 0;   // => no intersect
+      // for a ray, don't test r > 1.0
+      if (r > 1.0)  // segment ends before triangle
+        return 0;   // => no intersect
+      
+      I[0] = segm[0][0] + (dir[0]*r);
+      I[1] = segm[0][1] + (dir[1]*r);
+      I[2] = segm[0][2] + (dir[2]*r);
+      
+      // is I inside T?
+      var uu, uv, vv, wu, wv, D;
+      uu = u.dot(u);
+      uv = u.dot(v);
+      vv = v.dot(v);
+      w = I.minus(tri[0]);
+      wu = w.dot(u);
+      wv = w.dot(v);
+      D = uv * uv - uu * vv;
+      
+      // get and test parametric coords
+      var s, t;
+      s = (uv * wv - vv * wu) / D;
+      if (s < 0.0 || s > 1.0)        // I is outside T
+        return 0;
+      t = (uv * wu - uu * wv) / D;
+      if (t < 0.0 || (s + t) > 1.0)  // I is outside T
+          return 0;
+      
+      return 1; // I is in T
+    }
+    
+    heightMap = world.scene;
+    var v0 = [heightMap.triangles[0], heightMap.triangles[1], heightMap.triangles[2]],
+        v1 = [heightMap.triangles[3], heightMap.triangles[4], heightMap.triangles[5]],
+        v2 = [];
+    var candidates = [];
+    var holder = [];
+    var tri = [];
+    var j;
+    
+    for (var i = 6; i < heightMap.triangles.length; i += 3)
+    {
+      for (j = 0; j < 3; j++)
+      {
+        if (i > 6)
+        {
+          v0[j] = v1[j];
+          v1[j] = v2[j];
+        }
+        v2[j] = heightMap.triangles[i+j];
+      }
+      
+      tri[0] = v0;
+      tri[1] = v1;
+      tri[2] = v2;
+      if (coldet_segm_tri(ray, tri, holder) == 1)
+      {
+        candidates.push(holder);
+        holder = [];
+      }
+    }
+    
+    // we should really take the closest candidate to the camera, instead of just the first one in the list.
+    destination = candidates[0];
+    if (selectedCreature)
+      selectedCreature.actor.model.playAnimation("run", true);
+      // when creatures support independent animation, this should become:
+      //  selectedCreature.animation.play("run", true);
   }
 <%end%>
 </script>
@@ -150,8 +268,8 @@
   actual game, though I do hope to code a game in WebGL one day.
 </p>
 <p>
-  Currently, this demo makes use of World, Camera, HeightMap and Texture.
+  Currently, this demo makes use of World, Camera, HeightMap, Texture, Context, Renderable, MD2.
 </p>
 <p>
-  You can control the camera with W, S, A and D.
+  You can control the camera with W, S, A and D. Up and down arrows will change the camera's pitch.
 </p>

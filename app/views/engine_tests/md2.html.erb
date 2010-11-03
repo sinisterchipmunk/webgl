@@ -51,7 +51,7 @@
         // which is ugly. TODO: make this automatic, somehow.
         model.shader = 'per_fragment_lighting_with_texture';
         // Find the model's skin, load it and then bind it to the model.
-        model.addTexture(new Texture("/images/textures/"+$("model").value+".png"));
+        model.mesh.addTexture(new Texture("/images/textures/"+$("model").value+".png"));
         
         updateScale();
         

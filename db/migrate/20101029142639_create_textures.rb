@@ -3,7 +3,7 @@ class CreateTextures < ActiveRecord::Migration
     create_table :textures do |t|
       t.string :path
 
-      t.timestamps
+      #t.timestamps
     end
   end
 

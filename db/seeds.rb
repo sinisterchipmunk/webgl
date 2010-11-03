@@ -5,13 +5,27 @@
 #
 #   cities = City.create([{ :name => 'Chicago' }, { :name => 'Copenhagen' }])
 #   Mayor.create(:name => 'Daley', :city => cities.first)
-crafty_texture  = Texture.create(:path => "/images/textures/crafty.png");
-ogro_texture    = Texture.create(:path => "/images/textures/ogro.png");
-laalaa_texture  = Texture.create(:path => "/images/textures/laalaa.png");
-pknight_texture = Texture.create(:path => "/images/textures/pknight.png");
-
-Creature.create([{:name => "Demo - Crafty",  :model_name => "crafty", :textures => [crafty_texture]}, 
-                 {:name => "Demo - Laalaa",  :model_name => "laalaa", :textures => [laalaa_texture]},
-                 {:name => "Demo - Ogro",    :model_name => "ogro",   :textures => [ogro_texture]},
-                 {:name => "Demo - Pknight", :model_name => "pknight",:textures => [pknight_texture]},
-               ])
+Creature.transaction do
+  crafty_texture  = Texture.create(:path => "/images/textures/crafty.png");
+  ogro_texture    = Texture.create(:path => "/images/textures/ogro.png");
+  laalaa_texture  = Texture.create(:path => "/images/textures/laalaa.png");
+  pknight_texture = Texture.create(:path => "/images/textures/pknight.png");
+  
+  crafty_model  = Model.create(:name => "crafty",  :textures => [crafty_texture])
+  ogro_model    = Model.create(:name => "ogro",    :textures => [ogro_texture])
+  laalaa_model  = Model.create(:name => "laalaa",  :textures => [laalaa_texture])
+  pknight_model = Model.create(:name => "pknight", :textures => [pknight_texture])
+  
+  base_ai = AI.create(:name => "Base Creature")
+  
+  crafty_actor  = Actor.create(:name => 'crafty',  :model => crafty_model,  :ai => base_ai)
+  ogro_actor    = Actor.create(:name => 'ogro',    :model => ogro_model,    :ai => base_ai)
+  laalaa_actor  = Actor.create(:name => 'laalaa',  :model => laalaa_model,  :ai => base_ai)
+  pknight_actor = Actor.create(:name => 'pknight', :model => pknight_model, :ai => base_ai)
+  
+  Creature.create([{:name => "Demo - Crafty",  :actor => crafty_actor },
+                   {:name => "Demo - Laalaa",  :actor => laalaa_actor },
+                   {:name => "Demo - Ogro",    :actor => ogro_actor   },
+                   {:name => "Demo - Pknight", :actor => pknight_actor},
+                 ])
+end

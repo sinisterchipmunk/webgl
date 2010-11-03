@@ -80,11 +80,11 @@ var MD2 = function() {
   function updateBuffers(md2)
   {
     var i;
-    for (var id in md2.buffers) {
-      if (md2.buffers[id])
+    for (var id in md2.mesh.buffers) {
+      if (md2.mesh.buffers[id])
       {
-        var vertexBuffer = md2.buffers[id]['vertices'];
-        var normalBuffer = md2.buffers[id]['normals'];
+        var vertexBuffer = md2.mesh.getVertexBuffer();
+        var normalBuffer = md2.mesh.getNormalBuffer();
           
         for (i = 0; i < md2.snapshot.vertices.length; i++)
           vertexBuffer.js[i] = md2.snapshot.vertices[i];

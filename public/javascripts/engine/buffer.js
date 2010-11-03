@@ -1,79 +1,102 @@
-var Buffer = Class.create({
-  initialize: function(context, bufferType, classType, drawType, jsarr, itemSize) {
-    if (jsarr.length == 0) throw new Error("No elements in array to be buffered!");
-    if (!itemSize) throw new Error("Expected an itemSize - how many JS array elements represent a single buffered element?");
-    this.context = context;
-    this.buffer = null;
-    this.classType = classType;
-    this.itemSize = itemSize;
-    this.js = jsarr;
-    this.numItems = jsarr.length / itemSize;
-    this.bufferType = bufferType;
-    this.drawType = drawType;
-    
-    this.rebuild();
-  },
+/* 
+  Wrapper to manage JS and GL buffer (array) types. Automates context juggling by requiring the context to generate the
+  buffer for as an argument to #bind. If the context doesn't have a corresponding GL buffer for this data, it will be
+  created. Calling #refresh will regenerate the buffer data for all contexts.
+*/
+var Buffer = (function() {
+  function each_gl_buffer(self, func)
+  {
+    for (var id in self.gl)
+      func(self.gl[id].context, self.gl[id].buffer);
+  }
   
-  rebuild: function() {
-    if (!this.buffer) this.buffer = this.context.gl.createBuffer();
-    this.refresh();
-    this.buffer.itemSize = this.itemSize;
-    this.buffer.numItems = this.js.numItems;
-  },
-  
-  refresh: function() {
-    if (!this.buffer) this.rebuild();
+  return Class.create({
+    initialize: function(bufferType, classType, drawType, jsarr, itemSize) {
+      if (jsarr.length == 0) throw new Error("No elements in array to be buffered!");
+      if (!itemSize) throw new Error("Expected an itemSize - how many JS array elements represent a single buffered element?");
+      this.classType = classType;
+      this.itemSize = itemSize;
+      this.js = jsarr;
+      this.gl = {};
+      this.numItems = jsarr.length / itemSize;
+      this.bufferType = bufferType;
+      this.drawType = drawType;
+    },
     
-    var self = this;
-    logger.attempt("buffer#refresh", function() {
+    refresh: function() {
+      var self = this;
       if (self.classTypeInstance)
         for (var i = 0; i < self.js.length; i++)
           self.classTypeInstance[i] = self.js[i];
       else
         self.classTypeInstance = new self.classType(self.js);
       
-      self.context.gl.bindBuffer(self.bufferType, self.buffer);
-      context.checkError();
-      self.context.gl.bufferData(self.bufferType, self.classTypeInstance, self.drawType);
-      context.checkError();
-    });
-  },
-  
-  dispose: function() {
-    if (this.buffer) this.context.gl.deleteBuffer(this.buffer);
-    this.buffer = null;
-  },
-  
-  isDisposed: function() { return !this.buffer; },
-  
-  bind: function() { if (!this.buffer) this.rebuild(); this.context.gl.bindBuffer(this.bufferType, this.buffer); }
-});
+      if (!self.gl) return;
+      
+      logger.attempt("buffer#refresh", function() {
+        each_gl_buffer(self, function(context, buffer) {
+          context.bindBuffer(self.bufferType, buffer);
+          context.bufferData(self.bufferType, self.classTypeInstance, self.drawType);
+        });
+      });
+    },
+    
+    dispose: function() {
+      var self = this;
+      each_gl_buffer(this, function(context, buffer) {
+        context.deleteBuffer(buffer);
+        self.gl[context.id] = null;
+      });
+      self.gl = {};
+    },
+    
+    isDisposed: function() { return !this.gl; },
+    
+    bind: function(context) { context.bindBuffer(this.bufferType, this.getGLBuffer(context)); },
+    
+    getGLBuffer: function(context)
+    {
+      if (!context || typeof(context.id) == "undefined")
+        throw new Error("Cannot build a buffer without a context!");
+      
+      if (!this.gl[context.id])
+      {
+        var buffer = context.createBuffer();
+        buffer.itemSize = this.itemSize;
+        buffer.numItems = this.js.length;
+        this.gl[context.id] = {context:context,buffer:buffer};
+        this.refresh();
+      }
+      return this.gl[context.id].buffer;
+    }
+  });
+})();
 
 // More user-friendly versions of the above
 var ElementArrayBuffer = Class.create(Buffer, {
-  initialize: function($super, context, jsarr) {
-    $super(context, GL_ELEMENT_ARRAY_BUFFER, Uint16Array, GL_STREAM_DRAW, jsarr, 1);
+  initialize: function($super, jsarr) {
+    $super(GL_ELEMENT_ARRAY_BUFFER, Uint16Array, GL_STREAM_DRAW, jsarr, 1);
   }
 });
 
 var FloatArrayBuffer = Class.create(Buffer, {
-  initialize: function($super, context, jsarr, itemSize) {
-    $super(context, GL_ARRAY_BUFFER, Float32Array, GL_STATIC_DRAW, jsarr, itemSize);
+  initialize: function($super, jsarr, itemSize) {
+    $super(GL_ARRAY_BUFFER, Float32Array, GL_STATIC_DRAW, jsarr, itemSize);
   }
 });
 
 var VertexBuffer = Class.create(FloatArrayBuffer, {
-  initialize: function($super, context, jsarr) { $super(context, jsarr, 3); }
+  initialize: function($super, jsarr) { $super(jsarr, 3); }
 });
 
 var ColorBuffer = Class.create(FloatArrayBuffer, {
-  initialize: function($super, context, jsarr) { $super(context, jsarr, 4); }
+  initialize: function($super, jsarr) { $super(jsarr, 4); }
 });
 
 var TextureCoordsBuffer = Class.create(FloatArrayBuffer, {
-  initialize: function($super, context, jsarr) { $super(context, jsarr, 2); }
+  initialize: function($super, jsarr) { $super(jsarr, 2); }
 });
 
 var NormalBuffer = Class.create(FloatArrayBuffer, {
-  initialize: function($super, context, jsarr) { $super(context, jsarr, 3); }
+  initialize: function($super, jsarr) { $super(jsarr, 3); }
 });

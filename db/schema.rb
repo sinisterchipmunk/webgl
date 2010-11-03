@@ -10,20 +10,33 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20101029165109) do
+ActiveRecord::Schema.define(:version => 20101031223127) do
+
+  create_table "actors", :force => true do |t|
+    t.string  "name"
+    t.integer "model_id"
+    t.integer "ai_id"
+  end
+
+  create_table "ais", :force => true do |t|
+    t.string  "name"
+    t.integer "base_id"
+  end
 
   create_table "creatures", :force => true do |t|
-    t.string   "name"
-    t.string   "model_name"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.string  "name"
+    t.float   "scale"
+    t.string  "orientation", :limit => 3000
+    t.integer "actor_id"
   end
 
   create_table "model_textures", :force => true do |t|
-    t.integer  "creature_id"
-    t.integer  "texture_id"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.integer "model_id"
+    t.integer "texture_id"
+  end
+
+  create_table "models", :force => true do |t|
+    t.string "name"
   end
 
   create_table "passwords", :force => true do |t|
@@ -39,9 +52,7 @@ ActiveRecord::Schema.define(:version => 20101029165109) do
   end
 
   create_table "textures", :force => true do |t|
-    t.string   "path"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.string "path"
   end
 
   create_table "users", :force => true do |t|

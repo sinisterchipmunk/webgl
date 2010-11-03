@@ -19,12 +19,12 @@ var HeightMap = function() {
   // private helper function for iterating through all vertices (in the order they will be rendered)
   function each_vertex(self, callback) {
     if (!self.image) return;
-    var x, z;
-    for (x = 0; x < self.width(); x += 1)
+    var x, z, width = self.width(), depth = self.depth();
+    for (x = 0; x < width-1; x += 1)
     {
       // in order to use triangle strips with a single buffer...
       // first we draw DOWN the z-axis...
-      for (z = 0; z < self.depth(); z++)
+      for (z = 0; z < depth; z++)
       {
         callback(x, z);
         callback(x+1, z);
@@ -32,11 +32,12 @@ var HeightMap = function() {
         
       // then we draw back UP it. Draw this on paper and you'll see why.
       x += 1;
-      for (z = self.depth()-1; z >= 0; z--)
-      {
-        callback(x+1, z);
-        callback(x, z);
-      }
+      if (x < width-1)
+        for (z = depth-1; z >= 0; z--)
+        {
+          callback(x+1, z);
+          callback(x, z);
+        }
     }
   }
   
@@ -68,12 +69,21 @@ var HeightMap = function() {
       this.magnitude = options.magnitude || 1;
       this.scale  = options.scale  || 1;
       
-      var img = new Image();
-      img.onload = function() {
-        self.image = img;
-        self.rebuildAll();
-      };
-      img.src = image;
+      if (typeof(image) == "string") {
+        var img = new Image();
+        img.onload = function() {
+          self.image = img;
+          self.rebuildAll();
+          if (self.onload) logger.attempt("HeightMap#onload", function() { self.onload(); });
+        };
+        img.src = image;
+      }
+      else
+      {
+        self.image = image;
+        if (image.complete) self.rebuildAll();
+        image.onload = function() { self.rebuildAll(); }
+      }
     
       $super();
     },
@@ -81,14 +91,14 @@ var HeightMap = function() {
     updateObjectPosition: function(world, object, oldPosition, newPosition) {
       var self = this;
       
-      if (object.lowest_point)
+      if (object.lowest())
       {
         // TODO extrapolate this along up, right and view vectors. object.bottom() may be of some help for that.
         if (newPosition[0] < 0) newPosition[0] = 0;
         if (newPosition[0] > this.width()) newPosition[0] = this.width();
         if (newPosition[2] < 0) newPosition[2] = 0;
         if (newPosition[2] > this.depth()) newPosition[0] = this.depth();
-        newPosition[1] = this.height(newPosition[0], newPosition[2])*this.scale - object.lowest_point;
+        newPosition[1] = this.height(newPosition[0], newPosition[2])*this.scale - object.lowest();
       }
       else
         // not available? means vertex data hasn't initialized yet; need to retry after render.
@@ -115,6 +125,7 @@ var HeightMap = function() {
         
       each_vertex(self, function(x, z) {
         y = self.height(x, z);
+        if (isNaN(y)) alert(x+" "+z+" / "+self.width()+" "+self.depth());
         vertices.push(x*self.scale, y, z*self.scale);
         
         y -= self.data.lowest;
@@ -123,6 +134,8 @@ var HeightMap = function() {
         
         textureCoords.push(x/self.width(), z/self.depth());
       });
+      
+      self.triangles = vertices;  
 
       assert_equal(vertices.length / 3, colors.length / 4);
       assert_equal(vertices.length / 3, textureCoords.length / 2);

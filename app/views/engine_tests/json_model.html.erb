@@ -7,7 +7,7 @@
   <%content_for :init do%>
     JSON3D.load("/3d/teapot.json", function(obj) {
       world.addObject(teapot = obj);
-      teapot.texture = "/images/textures/poormansgrass.png";
+      teapot.mesh.texture = "/images/textures/poormansgrass.png";
     });
     world.camera.translateTo(0,0,50);
   <%end%>

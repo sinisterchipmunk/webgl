@@ -2,9 +2,11 @@ class CreateCreatures < ActiveRecord::Migration
   def self.up
     create_table :creatures do |t|
       t.string :name
-      t.string :model_name
-
-      t.timestamps
+      t.float :scale
+      t.string :orientation, :limit => 3000
+      
+      t.references :actor
+      #t.timestamps
     end
   end
 

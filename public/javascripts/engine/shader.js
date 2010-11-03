@@ -30,16 +30,17 @@ function Shader(options)
   self.getVertexShader = function() { return vertexShader; };
   
   self.compile = function() {
+    var context = self.context;
     if (!disposed && compiled) throw new Error("Tried to compile an already-compiled shader. Try calling #dispose() first.");
-    if (!self.context) throw new Error("No associated WebGLContext object!");
-    var gl = self.context.gl;
+    if (!context) throw new Error("No associated WebGLContext object!");
+    
     function compileShader(type, source) {
-      var shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
+      var shader = context.createShader(type);
+      context.shaderSource(shader, source);
+      context.compileShader(shader);
       
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-        throw new Error(gl.getShaderInfoLog(shader));
+      if (!context.getShaderParameter(shader, GL_COMPILE_STATUS))
+        throw new Error(context.getShaderInfoLog(shader));
       return shader;
     }
 
@@ -49,17 +50,15 @@ function Shader(options)
     if (self.vertex.source)   vertexShader   = compileShader(GL_VERTEX_SHADER,   self.vertex.source);
     else throw new Error("No vertex shader source!");
     
-    if (!disposed) program = program || gl.createProgram();
-    else program = gl.createProgram();
+    if (!disposed) program = program || context.createProgram();
+    else program = context.createProgram();
     
-    if (vertexShader)   gl.attachShader(program, vertexShader);
-    if (fragmentShader) gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
+    if (vertexShader)   context.attachShader(program, vertexShader);
+    if (fragmentShader) context.attachShader(program, fragmentShader);
+    context.linkProgram(program);
     
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+    if (!context.getProgramParameter(program, GL_LINK_STATUS))
       throw new Error("Could not initialize shader!");
-
-    self.context.checkError();    
 
     disposed = false;
     compiled = true;
@@ -75,7 +74,7 @@ function Shader(options)
   };
   self.attribute = self.attributes;
   
-  /* type is optional and defaults to gl.FLOAT (or whatever the previous type for this attribute was).
+  /* type is optional and defaults to GL_FLOAT (or whatever the previous type for this attribute was).
      buffer is the GL buffer, and is expected to have a #length property representing the item count.
      buffer may also be a function which returns the expected buffer object. */
   self.setAttribute = function(name, buffer, type) {
@@ -89,8 +88,6 @@ function Shader(options)
     if (typeof(result) == "function") result = result();
     return result;
   };
-  
-  
   
   self.uniforms = function(name, type) {
     if (!uniforms[name])
@@ -106,10 +103,10 @@ function Shader(options)
   self.uniform = self.uniforms;
   
   self.getAttributeLocation = function(name) {
-    var gl = self.context.gl;
+    var context = self.context;
     var attribute = self.attributes(name);
     if (typeof(attribute.location) == "undefined")
-      self.context.pushShader(program, function() { attribute.location = gl.getAttribLocation(program, name); });
+      self.context.pushShader(program, function() { attribute.location = context.getAttribLocation(program, name); });
 
     if (location == -1) throw new Error("Attribute not found: "+name);
     return attribute.location;
@@ -117,7 +114,7 @@ function Shader(options)
   
   /* Applies the buffers for each attribute. This is called automatically by #bind. */
   self.applyAttributes = function(program) {
-    var gl = self.context.gl;
+    var context = self.context;
     if (!program) program = self.getCompiledProgram();
     
     for (var name in attributes) {
@@ -127,20 +124,19 @@ function Shader(options)
       if (location > -1)
         if (attribute.buffer)
         {
-          if (attribute.buffer.buffer)
-            gl.bindBuffer(attribute.buffer.bufferType, attribute.buffer.buffer);
+          if (attribute.buffer.bufferType)
+            attribute.buffer.bind(self.context);
           else
-            gl.bindBuffer(gl.ARRAY_BUFFER, attribute.buffer);
-          self.context.checkError();
-          gl.enableVertexAttribArray(location);
-          self.context.checkError();
-          gl.vertexAttribPointer(location, attribute.buffer.itemSize, attribute.type, false, 0, 0);
-          self.context.checkError();
+          {
+            if (!attribute.buffer.itemSize) throw new Error("Buffer "+(attribute.toSource())+" is not dynamic, and its itemSize is not valid");
+            context.bindBuffer(GL_ARRAY_BUFFER, attribute.buffer);
+          }
+          context.enableVertexAttribArray(location);
+          context.vertexAttribPointer(location, attribute.buffer.itemSize, attribute.type, false, 0, 0);
         }
         else
         {
-          gl.disableVertexAttribArray(location);
-          self.context.checkError();
+          context.disableVertexAttribArray(location);
         }
     }
   };
@@ -166,7 +162,6 @@ function Shader(options)
           {
             gl[uniform.type](location, self.getUniformValue(name));
           }
-        self.context.checkError();
       }
     }
   };
@@ -174,11 +169,8 @@ function Shader(options)
   /* Deletes this program. Calling any method which requires a compiled program will recompile it. */
   self.dispose = function() {
     if (self.context)
-    {
-      var gl = self.context.gl;
-      gl.deleteProgram(program);
-      self.context.checkError();
-    }
+      self.context.deleteProgram(program);
+
     vertexShader = fragmentShader = null;
     compiled = false;
     disposed = true;
@@ -236,7 +228,7 @@ Shader.prototype = {
     var uniform = this.uniforms(name);
     if (typeof(uniform.location) != "undefined") return uniform.location;
     var program = this.getCompiledProgram();
-    return uniform.location = this.context.gl.getUniformLocation(program, name);
+    return uniform.location = this.context.getUniformLocation(program, name);
   }
 };
 

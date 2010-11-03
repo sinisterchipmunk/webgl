@@ -14,12 +14,14 @@
   
   <%content_for :canvas_clicked do%>
     $("heightmap").onload = function() {
-      height_map.image = $('heightmap');
-      height_map.scale = 0.75;
-      height_map.orientation.move(15);
-      height_map.orientation.strafe(-10);
-      // forces a rebuild of the height map on the next render
-      height_map.invalidate();
+      logger.attempt("image onload", function() {
+        height_map.image = $('heightmap');
+        height_map.scale = 0.75;
+        height_map.orientation.move(15);
+        height_map.orientation.strafe(-10);
+        // forces a rebuild of the height map on the next render
+        height_map.invalidate();
+      });
     };
     $('heightmap').src = '/images/colloquy.png';
   <%end%>

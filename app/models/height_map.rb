@@ -27,7 +27,7 @@ class HeightMap
     @options.collect do |key, value|
       case key.to_s
         when 'texture'
-          "map.addTexture(#{value[:path].to_json},{scale:#{value[:scale]}});"
+          "map.mesh.addTexture(#{value[:path].to_json},{scale:#{value[:scale]}});"
 #        when 'magnitude'
 #          "map.setMagnitude(#{value});"
       end

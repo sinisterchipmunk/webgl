@@ -1,8 +1,7 @@
 <script>
   <%content_for :global do%>
-    var renderable = new Renderable(
-      // init
-      function(vertices, colors, textureCoords, normals, indices) {
+    var renderable = new Renderable({
+      init:function(vertices, colors, textureCoords, normals, indices) {
         vertices.push( 0,  1, 0);
         vertices.push(-1, -1, 0);
         vertices.push( 1, -1, 0);
@@ -11,19 +10,18 @@
         textureCoords.push(0, 1);
         textureCoords.push(1, 1);
       },
-            
-      // update
-      function() {
+      
+      update:function(timechange) {
         this.orientation.rotateView(0.15, 0);
       }
-    );
+    });
   <%end%>
           
   <%content_for :init do%>
     context.world.camera.translateTo(0,0,10);
   
     renderable.orientation.translateTo(0,0,1);
-    renderable.texture = "/images/textures/poormansgrass.png";
+    renderable.mesh.texture = "/images/textures/poormansgrass.png";
     logger.level = Logger.DEBUG;
   <%end%>
           

@@ -47,8 +47,8 @@
   update_debug();
   world.addObject(quad);
   world.addObject(sphere);
-  quad.setColor([0.5,0.5,0.5,1]);
-  sphere.setColor([0.5,0.5,0.5,1]);
+  quad.mesh.setColor([0.5,0.5,0.5,1]);
+  sphere.mesh.setColor([0.5,0.5,0.5,1]);
   sphere.orientation.translateTo(3, 0, 0);
   sphere.update = function(timechange)
   {

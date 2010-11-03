@@ -6,9 +6,9 @@ logger.attempt('unit tests', function() {
   context.stopRendering();
 
   var renderable = new Renderable();
-  renderable.setGLBuffer(context, 'a-buffer', [1]);
-  assert_equal([1], renderable.getGLBuffer(context, 'a-buffer'));
+  renderable.mesh.setGLBuffer(context, 'a-buffer', [1]);
+  assert_equal([1], renderable.mesh.getGLBuffer(context, 'a-buffer'));
   
-  renderable.setGLVertexBuffer(context, [1,2,3]);
-  assert_equal([1,2,3], renderable.getGLVertexBuffer(context));
+  renderable.mesh.setGLVertexBuffer(context, [1,2,3]);
+  assert_equal([1,2,3], renderable.mesh.getGLVertexBuffer(context));
 });
