@@ -11,6 +11,9 @@ var Actor = Class.create(Renderable, {
       
       for (var i = 0; i < attributes.model.textures.length; i++)
         self.model.mesh.addTexture(attributes.model.textures[i].path);
+      
+      self.model.stop();
+      self.meshLoaded = true;
     });
             
     $super(attributes);

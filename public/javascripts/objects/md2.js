@@ -3,26 +3,14 @@ var MD2 = function() {
   // each context at the same time; and it also exposes the current vertex information to the outside world
   // without putting those buffers at risk.
   function initSnapshot(md2) {
+    var i;
     md2.frametracker = 0;
-    var counter = 0;
       
     var frame = md2.model_data.frames[md2.currentFrame];
-    for (i = 0; i < md2.model_data.triangles.length; i++)
-    {
-      triangle = md2.model_data.triangles[i];
-      
-      for (j = 0; j < 3; j++)
-      {
-        vindex = triangle.vertex_indices[j];
-        var tindex = triangle.texcoord_indices[j];
-        
-        for (k = 0; k < 3; k++) md2.snapshot.vertices[counter*3+k] = (frame.vertices[vindex*3+k]) * md2.scale;
-        for (k = 0; k < 2; k++) md2.snapshot.textureCoords[counter*2+k] = (md2.model_data.texcoords[tindex][k]);
-        for (k = 0; k < 3; k++) md2.snapshot.normals[counter*3+k] = (MD2.normals[frame.normal_indices[vindex]][k]);
-        
-        counter++;
-      }
-    }
+    for (i = 0; i < frame.vertices.length; i++)
+      md2.snapshot.vertices[i] = frame.vertices[i] * md2.scale;
+    for (i = 0; i < frame.normals.length; i++)
+      md2.snapshot.normals[i] = frame.normals[i];
   }
   
   function updateFramerate(md2, timechange) {
@@ -41,7 +29,7 @@ var MD2 = function() {
   
   function interpolate(md2)
   {
-    var i, j;
+    var i;
     
     md2.framecount = md2.framecount || 0;
     md2.framecount++;
@@ -59,15 +47,12 @@ var MD2 = function() {
       
     md2.interpolation = md2.interpolation || {vertices:[],normals:[]};
 
-    for (j = 0; j < 3; j++)
+    for (i = 0; i < currentFrame.vertices.length; i++)// += 3)
     {
       // figure out vertex interpolation
-      for (i = 0; i < currentFrame.vertices.length; i += 3)
-        md2.interpolation.vertices[i+j] = (targetFrame.vertices[i+j] - currentFrame.vertices[i+j]);
-
+      md2.interpolation.vertices[i] = (targetFrame.vertices[i] - currentFrame.vertices[i]);
       // figure out normal interpolation
-      for (i  = 0; i < currentFrame.normal_indices.length; i++)
-        md2.interpolation.normals[i*3+j] = (MD2.normals[targetFrame.normal_indices[i]][j] - MD2.normals[currentFrame.normal_indices[i]][j]);
+      md2.interpolation.normals[i] = (targetFrame.normals[i] - currentFrame.normals[i]);
     }
     
     // reset the timer and mark the interpolation as valid
@@ -101,7 +86,7 @@ var MD2 = function() {
     var i, j, k, triangle, vindex;
     if (md2.snapshot.vertices.length == 0) // if no vertices exist, we need to populate them.
       initSnapshot(md2);
-
+    
     updateFramerate(md2, timechange);
     
     // we know what frame we're on, and we know what frame we're targeting (currentFrame+1)
@@ -133,21 +118,10 @@ var MD2 = function() {
         
         if (md2.use_interpolation || md2.interpolation.timer <= Math.EPSILON)
         {
-          var counter = 0;
-          for (i = 0; i < md2.model_data.triangles.length; i++)
+          for (i = 0; i < md2.interpolation.vertices.length; i++)
           {
-            triangle = md2.model_data.triangles[i];
-            for (j = 0; j < 3; j++)
-            {
-              vindex = triangle.vertex_indices[j];
-              
-              for (k = 0; k < 3; k++)
-              {
-                md2.snapshot.vertices[counter] += md2.interpolation.vertices[vindex*3+k] * percentage * md2.scale;
-                md2.snapshot.normals[counter] += md2.interpolation.normals[vindex*3+k] * percentage * md2.scale;
-                counter++;
-              }
-            }
+            md2.snapshot.vertices[i] += md2.interpolation.vertices[i] * percentage * md2.scale;
+            md2.snapshot.normals[i]  += md2.interpolation.normals[i]  * percentage * md2.scale;
           }
         }
       }
@@ -271,11 +245,70 @@ var MD2 = function() {
       this.fps = 10;
       
       snapshot(this);
+      
+      for (var i = 0; i < this.model_data.texcoords.length; i++)
+        textureCoords.push(this.model_data.texcoords[i]);
+      
+      /*
+      If we were going to build an optimized list (we're not), then here's
+      how we'd do it. We're not going to because A) there's not much difference,
+      at least considering we can't use real triangle strips / fans; and B)
+      we lose precision with the textures, compromising image quality. I think
+      it remains to be seen at this point whether there's any noteworthy gain
+      from using these optimization techniques on modern hardware.
+      ***
+      
       var i, j;
+      var last, current, next;
+      var offset = 0, command;
+      
+      for (i = 0; i < this.model_data.gl_commands.length; i++)
+      {
+        offset = textureCoords.length / 2;
+        command = this.model_data.gl_commands[i];
+        for (j = 0; j < command.segments.length; j++)
+        {
+          textureCoords.push(command.segments[j].texture_s);
+          textureCoords.push(command.segments[j].texture_t);
+        }
+
+
+        if (command.type == "triangle_strip")
+        {
+          last = 0;
+          current = 1;
+          for (j = 2; j < command.segments.length; j++)
+          {
+            next = j;
+            indices.push(offset+last);
+            indices.push(offset+current);
+            indices.push(offset+next);
+            last = current;
+            current = next;
+          }
+        }
+        else// triangle fan
+        {
+          var origin = 0;
+          last = 1;
+          for (j = 2; j < command.segments.length; j++)
+          {
+            next = j;
+            indices.push(offset+origin);
+            indices.push(offset+last);
+            indices.push(offset+next);
+            last = next;
+          }
+          // fill in the remaining gap
+          indices.push(offset+origin);
+          indices.push(offset+last);
+          indices.push(offset+1);
+        }
+      }
+      */
+      
       for (j = 0; j < this.snapshot.vertices.length; j++)
         vertices.push(this.snapshot.vertices[j]);
-      for (j = 0; j < this.snapshot.textureCoords.length; j++)
-        textureCoords.push(this.snapshot.textureCoords[j]);
       for (j = 0; j < this.snapshot.normals.length; j++)
         normals.push(this.snapshot.normals[j]);
     },
@@ -295,15 +328,19 @@ MD2.load = function(model_name, success)
   new Ajax.Request("/md2/"+model_name, {
     onSuccess: function(response) {
       logger.attempt("MD2.load-success", function() {
+        var i, j, k, l;
         if (response.responseJSON == null) throw new Error("Could not parse a JSON object from the response text:\n\n"+response.responseText);
         
+        var frame;
+        
         /* first unpack the frame data so the model can worry about important stuff */
-        for (var i = 0; i < response.responseJSON.frames.length; i++)
+        for (i = 0; i < response.responseJSON.frames.length; i++)
         {
-          var frame = response.responseJSON.frames[i];
-          for (var j = 0; j < frame.vertices.length; j += 3)
+          frame = response.responseJSON.frames[i];
+          var rearranged_vertices = [], rearranged_normals = [];
+          for (j = 0; j < frame.vertices.length; j += 3)
           {
-            for (var k = 0; k < 3; k++)
+            for (k = 0; k < 3; k++)
               frame.vertices[j+k] = (frame.vertices[j+k] * frame.scale[k]) + frame.translation[k];
 
             // All the MD2 files I've seen so far put the up axis along Z, not Y. I'm going to assume that this
@@ -321,6 +358,72 @@ MD2.load = function(model_name, success)
             frame.vertices[j+2] = vz;
           }
         }
+        
+        // sets up an array of vertices, normals and indices as WebGL expects them
+        var counter = 0, f, texes = [], json = response.responseJSON, new_verts = {}, new_norms = {};
+        for (j = 0; j < json.triangles.length; j++)
+        {
+          var triangle = json.triangles[j];
+          for (k = 0; k < 3; k++)
+            texes.push(json.texcoords[triangle.texcoord_indices[k]][0], json.texcoords[triangle.texcoord_indices[k]][1]);
+
+          for (f = 0; f < json.frames.length; f++)
+          {
+            frame = json.frames[f];
+            new_verts[f] = new_verts[f] || [];
+            new_norms[f] = new_norms[f] || [];
+          
+            for (k = 0; k < 3; k++)
+            {
+              var vindex = triangle.vertex_indices[k];
+              new_verts[f].push(frame.vertices[vindex*3], frame.vertices[vindex*3+1], frame.vertices[vindex*3+2]);
+              
+              new_norms[f].push(MD2.normals[frame.normal_indices[vindex]][0],
+                                MD2.normals[frame.normal_indices[vindex]][1],
+                                MD2.normals[frame.normal_indices[vindex]][2]);
+            }
+          }
+        }
+        
+        json.texcoords = texes;
+        for (f in new_verts)
+        {
+          json.frames[f].vertices = new_verts[f];
+          json.frames[f].normals = new_norms[f];
+        }
+        
+        
+
+        /* works, but produces glitches in texture mapping. I think it's an effect of the optimized
+         rendering, so I"m going the old fashioned triangle route. See above note in #init
+         for more info.
+        ***
+
+        var command, frame_verts, vindex, vindex2 = 0, tmp_verts = {};
+        for (i = 0; i < response.responseJSON.gl_commands.length; i++)
+        {
+          command = response.responseJSON.gl_commands[i];
+          for (j = 0; j < command.segments.length; j++)
+          {
+            vindex = command.segments[j].vertex_index;
+            for (var f = 0; f < response.responseJSON.frames.length; f++)
+            {
+              frame = response.responseJSON.frames[f];
+              frame_verts = frame.vertices;
+              tmp_verts[f] = tmp_verts[f] || [];
+              for (k = 0; k < 3; k++)
+                tmp_verts[f].push(frame_verts[vindex*3+k]);
+            }
+            command.segments[j].vertex_index = vindex2;
+            vindex2++;
+          }
+        }
+        for (f in tmp_verts)
+        {
+          frame = response.responseJSON.frames[f];
+          frame.vertices = tmp_verts[f];
+        }
+        //*/
         
         success(new MD2(response.responseJSON));
       });
@@ -358,9 +461,14 @@ MD2.animations = {
   boom:               {start: 198, stop: 198, fps:  5, loop:false}
 };
 
+MD2.animation_names = [];
+
 // each animation should have a reference to its own name.
 for (var id in MD2.animations)
+{
   MD2.animations[id].name = id;
+  MD2.animation_names.push(id);
+}
 
 /* Normals are precalculated for MD2 models. */
 MD2.normals = [

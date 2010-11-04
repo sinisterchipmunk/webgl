@@ -96,7 +96,8 @@ class EngineTestsController < ApplicationController
   end
   
   def creatures
-    dependencies << "models/creature" << "objects/md2" << "engine/animation" << "models/actor" << "models/creature"
+    dependencies << "models/creature" << "objects/md2" << "engine/animation" << "models/actor" << "models/creature" <<
+            "engine/animation"
     
     world.camera.position = [0,0,10]
     
@@ -108,6 +109,8 @@ class EngineTestsController < ApplicationController
     
     ogro1.scale = 0.05 # ditto the above
     ogro2.scale = 0.05
+    
+    @creatures = [ ogro1, ogro2 ]
     
     world << ogro1
     world << ogro2

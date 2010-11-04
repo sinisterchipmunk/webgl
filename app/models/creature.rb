@@ -25,6 +25,8 @@ class Creature < ActiveRecord::Base
   end
   
   def to_js
-    "Creature.instance(#{to_json(:include => { :actor => { :include => {:model => {:include => :textures}, :ai => {}} } })}.creature)"
+    "Creature.instance(#{to_json(:include => { :actor => { :include => {:model => {:include => :textures}, :ai => {}} } })}.creature)".html_safe
   end
+  
+  alias_method :to_s, :to_js
 end
