@@ -25,7 +25,7 @@ class EngineTestsController < ApplicationController
   
   def interface
     dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line" << "models/actor" <<
-            "models/creature" << "models/ai";
+            "models/creature" << "models/ai" << "engine/animation"
     
     scene = HeightMap.new("/images/height.png",
                           :texture => { :path => "/images/textures/poormansgrass.png", :scale => 3 },
@@ -107,8 +107,7 @@ class EngineTestsController < ApplicationController
     ogro1.orientation.position = [-1.5,0,0] # note that this could just be saved in the db. I don't because I'm generating
     ogro2.orientation.position = [ 1.5,0,0] # different positions depending on the controller action. Yay for flexibility :)
     ogro2.orientation.view = [0,0,1];
-    ogro2.orientation.right = [-1,0,0];
-    
+    ogro2.orientation.up   = [0,1,0];
     ogro1.scale = 0.05 # ditto the above
     ogro2.scale = 0.05
     

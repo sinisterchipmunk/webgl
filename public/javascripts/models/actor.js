@@ -19,7 +19,7 @@ var Actor = Class.create(Renderable, {
     $super(attributes);
   },
   
-  // No need for an update thread for Actor.
+  // No need for an update thread for Actor, since it's just used to share data between Creatures.
   update: null,
   
   render: function($super, options) {

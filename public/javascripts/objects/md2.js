@@ -1,4 +1,6 @@
 var MD2 = function() {
+  /* TODO: Animation is now a separate object; animation-specific code should be removed from MD2. */
+  
   // snapshot serves a dual purpose: it lets us only calculate the frame once and apply it to the buffers for
   // each context at the same time; and it also exposes the current vertex information to the outside world
   // without putting those buffers at risk.

@@ -22,30 +22,15 @@ var Creature = (function() {
       $super(attributes);
     },
     
-    // No default shader because Creature isn't responsible for shading itself.
-    // Pick shaders are a special case and are handled differently by Renderable.
-//    getDefaultShader: function() { return null; },
-    
-    lowest: function() { return this.actor.lowest(); },
-//    draw: function($super, options) {
-//      this.actor.render(options);
-//    },
-    
+//    lowest: function() { return this.actor.lowest(); },
+    lowest: function() { return this.mesh ? this.mesh.lowest() : 0; },
+
     init: function(vertices, colors, texcoords, normals)
     {
       if (this.actor.meshLoaded)
       {
-//        var i;
         /* clone actor's mesh data for animation purposes - this way we don't affect the root actor when animating */
         this.actor.model.mesh.init(vertices, colors, texcoords, normals);
-//        var vertexBuffer   = this.actor.model.mesh.getVertexBuffer().js;
-//        var colorBuffer    = this.actor.model.mesh.getColorBuffer() .js;
-//        var normalBuffer   = this.actor.model.mesh.getNormalBuffer().js;
-//        var texcoordBuffer = this.actor.model.mesh.originalTextureCoords;
-//        for (i = 0; i < vertexBuffer  .length; i++) vertices .push(vertexBuffer[i]  );
-//        for (i = 0; i < normalBuffer  .length; i++) normals  .push(normalBuffer[i]  );
-//        for (i = 0; i < colorBuffer   .length; i++) colors   .push(colorBuffer[i]   );
-//        for (i = 0; i < texcoordBuffer.length; i++) texcoords.push(texcoordBuffer[i]);
       }
     },
     

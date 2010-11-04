@@ -132,6 +132,7 @@ function Camera(options)
     up = upVec.normalize();
     right = (rightVec || view.cross(up)).normalize();
     position = positionVec || position;
+    self.look();
     return self;
   };
 }

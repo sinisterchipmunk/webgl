@@ -8,17 +8,14 @@
     <%@creatures.each do |creature|%>
       <%=creature%>.shader = 'per_fragment_lighting_with_texture';
     <%end%>
-  <%end%>
-        
-  <%content_for :render do%>
-    world.render();
-  
+
+    /* set up lighting, which we can't do from Ruby yet */
     var direction = [1,-0.75,-1];
     var dircolor = [1,1,1];
     var ambient = [0.4,0.4,0.4];
     var pointLocation = [-2, 0, 0];
     var pointColor = [0, 0, 0];
-    
+      
     var shader = context.shaders['per_fragment_lighting_with_texture'];
     shader.uniform('uAmbientColor', 'uniform3fv').value = function() { return new Float32Array(ambient); };
     shader.uniform('uLightingDirection', 'uniform3fv').value = function() { return new Float32Array(direction.normalize().times(-1)); };

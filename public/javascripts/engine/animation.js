@@ -17,16 +17,7 @@ var Animation = (function() {
       anim.interpolation.vertices[i] = next.vertices[i] - current.vertices[i];
       anim.interpolation.normals[i]  = next.normals[i]  - current.normals[i];
     }
-//      for (i = 0; i < current.vertices.length; i += 3)
-//        anim.interpolation.vertices[i+j] = next.vertices[i+j] - current.vertices[i+j];
-      
-      // figure out normal interpolation
-//      for (i = 0; i < current.normals.length; i++)
-//        anim.interpolation.normals[i+j] = next.normals[i+j] - current.normals[i+j];
-      
-//      for (i = 0; i < current.normal_indices.length; i++)
-//        anim.interpolation.normals[i*3+j] = (MD2.normals[next.normal_indices[i]][j] - MD2.normals[current.normal_indices[i]][j]);
-    
+
     // reset the timer and mark the interpolation as valid
     anim.interpolation.timer = 0;
     anim.interpolation.timeout = 1.0 / anim.meta.fps;
@@ -81,54 +72,27 @@ var Animation = (function() {
         interpolate(this);
       else
       {
-        var i, j, k, vindex;
-        var current = this.currentFrame();
+        var i, current = this.currentFrame();
         this.interpolation.timer += timechange;
-//        if (this.interpolation.timer > this.interpolation.timeout) this.interpolation.timer = this.interpolation.timeout;
         var pcnt = (this.interpolation.timer / this.interpolation.timeout);
 
         if (pcnt > 0)
         {
-//          if (!md2.use_interpolation) percentage = 0;
-
           // have we run out the timer?
-          if (1 - pcnt <= 0)//Math.EPSILON)
+          if (1 - pcnt <= Math.EPSILON)
           { //...yes
             this.step();
-            // there's a possibility we still have a fraction of a second to handle. If so, handle it.
-            pcnt -= 1;
+            pcnt = 1;
           }
           
           var v = self.mesh.getVertexBuffer(), n = self.mesh.getNormalBuffer();
           for (i = 0; i < v.js.length; i++)
           {
-            v.js[i] = (this.currentFrame().vertices[i] + (this.interpolation.vertices[i] * pcnt)) * self.scale;
-            n.js[i] = (this.currentFrame().normals[i]  + (this.interpolation.normals[i]  * pcnt)); // don't scale normals :)
+            v.js[i] = (current.vertices[i] + (this.interpolation.vertices[i] * pcnt)) * self.scale;
+            n.js[i] = (current.normals[i]  + (this.interpolation.normals[i]  * pcnt)); // don't scale normals :)
           }
           v.refresh();
           n.refresh();
-        
-          
-//          if (md2.use_interpolation || md2.interpolation.timer <= Math.EPSILON)
-//          {
-//            var counter = 0;
-//            for (i = 0; i < md2.model_data.triangles.length; i++)
-//            {
-//              triangle = md2.model_data.triangles[i];
-//              for (j = 0; j < 3; j++)
-//              {
-//                vindex = triangle.vertex_indices[j];
-//              
-//                for (k = 0; k < 3; k++)
-//                {
-//                  md2.snapshot.vertices[counter] += md2.interpolation.vertices[vindex*3+k] * percentage * md2.scale;
-//                  md2.snapshot.normals[counter] += md2.interpolation.normals[vindex*3+k] * percentage * md2.scale;
-//                  counter++;
-//                }
-//              }
-//            }
-//          }
-          
         }
       }
     }
