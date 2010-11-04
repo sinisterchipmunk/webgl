@@ -5,17 +5,18 @@ var Animation = (function() {
   // calculates interpolation from current frame to next frame. This amount will
   // be multiplied by the interpolation percentage, which is increased based on
   // timechange via calls to #update.
-  function interpolate(anim, self)
+  function interpolate(anim)
   {
     var next = anim.nextFrame();
     var current = anim.currentFrame();
     var i, j;
     
-    for (j = 0; j < 3; j++)
+    // figure out vertex information
+    for (i = 0; i < current.vertices.length; i++)
     {
-      // figure out vertex information
-      for (i = 0; i < current.vertices.length; i++)
-        anim.interpolation.vertices[i+j] = next.vertices[i+j] - current.vertices[i+j];
+      anim.interpolation.vertices[i] = next.vertices[i] - current.vertices[i];
+      anim.interpolation.normals[i]  = next.normals[i]  - current.normals[i];
+    }
 //      for (i = 0; i < current.vertices.length; i += 3)
 //        anim.interpolation.vertices[i+j] = next.vertices[i+j] - current.vertices[i+j];
       
@@ -25,8 +26,6 @@ var Animation = (function() {
       
 //      for (i = 0; i < current.normal_indices.length; i++)
 //        anim.interpolation.normals[i*3+j] = (MD2.normals[next.normal_indices[i]][j] - MD2.normals[current.normal_indices[i]][j]);
-      
-    }
     
     // reset the timer and mark the interpolation as valid
     anim.interpolation.timer = 0;
@@ -41,6 +40,7 @@ var Animation = (function() {
       if (!meta) throw new Error("No meta data given!");
       
       // meta contains: start, stop, fps, name, loop
+      this.name    = meta.name;
       this.meta    = meta;
       this.frames  = options.frames;
       this.loop    = (typeof(options.loop) == "undefined") ? meta.loop : options.loop;
@@ -66,6 +66,7 @@ var Animation = (function() {
     
     /* "steps" ahead a number of frames. The default is 1. */
     step: function(distance) {
+      this.interpolation.valid = false;
       if (typeof(distance) != "number") distance = 1;
       for (var i = 0; i < distance; i++)
         this.current = this.nextFrameIndex();
@@ -77,13 +78,13 @@ var Animation = (function() {
      */
     update: function(self, timechange) {
       if (!this.interpolation.valid)
-        interpolate(this, self);
+        interpolate(this);
       else
       {
         var i, j, k, vindex;
         var current = this.currentFrame();
         this.interpolation.timer += timechange;
-        if (this.interpolation.timer > this.interpolation.timeout) this.interpolation.timer = this.interpolation.timeout;
+//        if (this.interpolation.timer > this.interpolation.timeout) this.interpolation.timer = this.interpolation.timeout;
         var pcnt = (this.interpolation.timer / this.interpolation.timeout);
 
         if (pcnt > 0)
@@ -91,20 +92,21 @@ var Animation = (function() {
 //          if (!md2.use_interpolation) percentage = 0;
 
           // have we run out the timer?
-          if (1 - pcnt <= Math.EPSOLON)
+          if (1 - pcnt <= 0)//Math.EPSILON)
           { //...yes
-            this.interpolation.valid = false;
             this.step();
+            // there's a possibility we still have a fraction of a second to handle. If so, handle it.
+            pcnt -= 1;
           }
           
-          for (var counter = 0; counter < self.vertices.length; counter++)
+          var v = self.mesh.getVertexBuffer(), n = self.mesh.getNormalBuffer();
+          for (i = 0; i < v.js.length; i++)
           {
-            k = counter % 3;
-            j = ((counter - k) / 3) % 3;
-            i = (((counter - k) / 3) - j) / 3;
-            
-//            self.vertices[counter] += this.interpolation.vertices[]
+            v.js[i] = (this.currentFrame().vertices[i] + (this.interpolation.vertices[i] * pcnt)) * self.scale;
+            n.js[i] = (this.currentFrame().normals[i]  + (this.interpolation.normals[i]  * pcnt)); // don't scale normals :)
           }
+          v.refresh();
+          n.refresh();
         
           
 //          if (md2.use_interpolation || md2.interpolation.timer <= Math.EPSILON)

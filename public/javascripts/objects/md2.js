@@ -121,7 +121,7 @@ var MD2 = function() {
           for (i = 0; i < md2.interpolation.vertices.length; i++)
           {
             md2.snapshot.vertices[i] += md2.interpolation.vertices[i] * percentage * md2.scale;
-            md2.snapshot.normals[i]  += md2.interpolation.normals[i]  * percentage * md2.scale;
+            md2.snapshot.normals[i]  += md2.interpolation.normals[i]  * percentage; // don't scale normals :)
           }
         }
       }

@@ -106,6 +106,8 @@ class EngineTestsController < ApplicationController
     
     ogro1.orientation.position = [-1.5,0,0] # note that this could just be saved in the db. I don't because I'm generating
     ogro2.orientation.position = [ 1.5,0,0] # different positions depending on the controller action. Yay for flexibility :)
+    ogro2.orientation.view = [0,0,1];
+    ogro2.orientation.right = [-1,0,0];
     
     ogro1.scale = 0.05 # ditto the above
     ogro2.scale = 0.05

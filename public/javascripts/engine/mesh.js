@@ -53,6 +53,7 @@ var Mesh = function() {
     },
     
     addTexture: function(tex, options) {
+      if (!options && tex.texture) { options = tex; tex = tex.texture; }
       this.setTexture(this.textures.length, tex, options);
     },
     
