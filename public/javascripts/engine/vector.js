@@ -24,7 +24,12 @@ Array.prototype._vectorize = function(other, y, z, w) {
   return result;
 };
 
+Array.prototype.innerProduct = function(other) {
+  return (this[0]*other[0] + this[1]*other[1] + this[2]*other[2]);
+};
+
 Array.prototype.equals = function(other) {
+  if (!other) return false;
   if (other.length != this.length) return false;
   for (var i = 0; i < this.length; i++)
     if (isNaN(this[i]) && !isNaN(other[i])) return false;

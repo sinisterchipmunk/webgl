@@ -3,6 +3,7 @@
 //  var RELEASE = true;
   var heightMap;
   var _debug_ray = new Line([0,0,-1],[0,1,-1]);
+  var _debug_axis = new Axis();
   var selectedCreature = null;
   var destination = null;
   var selectionQuad = null;
@@ -112,6 +113,9 @@
   world.camera.moveTo(35, 75, 42);
   world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
 
+  _debug_axis.offset = [0,10,0];
+  _debug_axis.scale = 3;
+
   // need to keep the debug ray separate from the world because
   // our current implementation of heightmap will reposition
   // the ray based on the surrounding terrain. This is suboptimal
@@ -138,19 +142,17 @@
     world.context.gl.enable(GL_BLEND);
     world.context.gl.blendFunc(GL_SRC_ALPHA, GL_ONE);
     selectionQuad.render(world.context);
+    _debug_axis.render(world.context);
     
     if (destination)
     {
-      // hardcode timechange to 0.15 -- this is not accurate and not correct.
-      // this belongs in selectedCreature#update
-//      var pos = selectedCreature.orientation.getPosition();
-//      logger.info(destination.toSource()+" "+pos.toSource());
-      
-//      var normal = (destination.minus(pos)).normalize();
-//      selectedCreature.orientation.setPosition(pos.plus(normal.times(0.15)));
-      
-      selectionQuad.orientation.setPosition(destination[0], destination[1]+1, destination[2]);
-      selectionQuad.render(world.context);
+      if (!selectedCreature.ai.isMoving())
+        destination = null;
+      else
+      {
+        selectionQuad.orientation.setPosition(destination[0], destination[1]+1, destination[2]);
+        selectionQuad.render(world.context);
+      }
     }
   }
 <%end%>
@@ -162,6 +164,7 @@
     selectedCreature = target;
     destination = null;
     selectionQuad.setSize(selectedCreature.mesh.size_x, selectedCreature.mesh.size_z);
+    _debug_axis.set(selectedCreature.orientation);
   }
   else
   {
@@ -256,7 +259,10 @@
     // we should really take the closest candidate to the camera, instead of just the first one in the list.
     destination = candidates[0];
     if (selectedCreature)
+    {
+      selectedCreature.ai.moveTo(destination, function(creature) { creature.playAnimation("stand", true); });
       selectedCreature.playAnimation("run", true);
+    }
   }
 <%end%>
 </script>
@@ -270,4 +276,8 @@
 </p>
 <p>
   You can control the camera with W, S, A and D. Up and down arrows will change the camera's pitch.
+</p>
+<p>
+  You can also click on a creature, and tell the creature where to move by clicking on a location on the field.
+  This is still pretty buggy (and slow) and it still has a lot of room for improvement, but it does work.
 </p>

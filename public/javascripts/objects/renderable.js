@@ -8,16 +8,6 @@ var Renderable = function() {
     return self.pickShader[context.id];
   }
   
-  function applyObjectSpaceMatrixTransformations(self)
-  {
-    // some setup
-    var matr = self.orientation.getMatrix().dup();
-    matr.elements[0][3] = matr.elements[1][3] = matr.elements[2][3] = 0;
-    var trans = Matrix.Translation($V(self.orientation.getPosition())).multiply(matr);
-    
-    mvMatrix = mvMatrix.x(trans);
-  }
-  
   // class
   return Class.create({
     initialize: function(attributes)
@@ -43,6 +33,13 @@ var Renderable = function() {
         self.pickShader = false;
         self.textures = [];
         self.textureBuildQueue = [];
+        self.worldSpaceVertices = [];
+        
+        // this is necessary to prevent losing "this" with a straight function assignment
+        function resetMatrixDependentData() { self.resetMatrixDependentData(); }
+        
+        self.orientation.addListener('orientation', resetMatrixDependentData);
+        self.orientation.addListener('position',    resetMatrixDependentData);
       
         var ori = attributes.orientation;
         if (ori && (ori.view || ori.up || ori.position || ori.right))
@@ -57,6 +54,57 @@ var Renderable = function() {
         self.scale = attributes.scale || 1;
       });
     },
+    
+    /*
+      clears memoized data -- see #transformVertex, #getTransformationMatrix, #getWorldSpaceVertices, etc.
+      This is called internally and you should rarely, if ever, have to do this yourself.
+     */
+    resetMatrixDependentData: function() {
+      this.worldSpaceVertices.clear();
+      this.transformationMatrix = null;
+    },
+    
+    /* Transforms a single vertex according to this Renderable's orientation. */
+    transformVertex: function(point) {
+      // we'll memoize the matrix just as we memozed #getWorldSpaceVertices.
+      if (arguments.length == 3) point = [arguments[0], arguments[1], arguments[2]];
+      
+      var trans = this.getTransformationMatrix();      
+      if (point.length != 4)
+        point[3] = 1; // this represents translation scale!
+      point = trans.x($V(point)).elements;
+      return point;
+    },
+    
+    getTransformationMatrix: function() {
+      if (this.transformationMatrix) return this.transformationMatrix;
+      
+      /* TODO: refactor this - it's the same as applyObjectSpaceMatrixTransformations(). */
+      var matr = this.orientation.getMatrix().dup();
+      matr.elements[0][3] = matr.elements[1][3] = matr.elements[2][3] = 0;
+      this.transformationMatrix = Matrix.Translation($V(this.orientation.getPosition())).multiply(matr.transpose());
+      return this.transformationMatrix;
+    },
+    
+    /*
+      Returns all vertexes, in the order they are found using this.mesh.getVertexBuffer(), transformed according
+      to this object's orientation. As this implies, it's an expensive call that you should avoid using unless
+      absolutely necessary.
+     */
+    getWorldSpaceVertices: function() {
+      // we'll memoize the vertices to improve performance. Note that the memoized vertices are emptied whenever
+      // the camera changes or the object is rebuilt.
+      if (this.worldSpaceVertices.length != 0) return this.worldSpaceVertices;
+      
+      if (!this.mesh || !this.mesh.getVertexBuffer()) return [];
+      
+      var buf = this.mesh.getVertexBuffer().js;
+      for (var i = 0; i < buf.length; i += 3)
+        this.worldSpaceVertices.push(this.transformVertex(buf[i], buf[i+1], buf[i+2]));
+      return this.worldSpaceVertices;
+    },
+    
+    lowest: function() { return this.mesh.lowest(); },
     
     getDefaultShader: function() {
       return this.shader || this.mesh.getDefaultShader();
@@ -78,10 +126,11 @@ var Renderable = function() {
         if (options.createShader) options = {context:options};
         if (!options.context) throw new Error("no context given!");
         if (self.update && !self.updateInterval) self.rebuild(options.context);
+        else if (!self.update && self.updateInterval) { clearInterval(self.updateInterval); self.updateInterval = null; }
         
         options.mode = options.mode || FILL;
         mvPushMatrix();
-          applyObjectSpaceMatrixTransformations(self);
+          mvMatrix = mvMatrix.x(self.getTransformationMatrix());
   
           if (options.mode == RENDER_PICK && !options.shader) options.shader = getPickShader(self, options.context);
           else options.shader = options.shader || self.getDefaultShader();
@@ -126,6 +175,7 @@ var Renderable = function() {
     },
     
     rebuild: function(context) {
+      this.resetMatrixDependentData();
       var self = this;
       logger.attempt("Renderable#rebuild", function() {
         if (!context) throw new Error("Can't rebuild without a context!");

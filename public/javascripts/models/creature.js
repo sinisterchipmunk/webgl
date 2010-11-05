@@ -18,11 +18,23 @@ var Creature = (function() {
       this.actor = Actor.instance(attributes.actor);
       this.scale = this.actor.scale = attributes.scale;
       this.playAnimation("stand");
+      this.movement = new MovementDescriptor();
+      
+      /* this sets up a proxy object so other classes can do things like:
+           creature.ai.isMoving()
+         instead of:
+           creature.actor.ai.isMoving(creature)
+       */
+      var self = this;
+      this.ai = {
+        update: function(timechange, scene) { self.actor.ai.update(self, timechange, scene); },
+        moveTo: function(destination, completion) { self.actor.ai.moveTo(self, destination, completion); },
+        isMoving: function() { return self.actor.ai.isMoving(self); }
+      };
       
       $super(attributes);
     },
     
-//    lowest: function() { return this.actor.lowest(); },
     lowest: function() { return this.mesh ? this.mesh.lowest() : 0; },
 
     init: function(vertices, colors, texcoords, normals)
@@ -39,6 +51,7 @@ var Creature = (function() {
       if (this.actor.meshLoaded && (!this.animation || this.animation.name != this.animationName))
         buildAnimation(this);
       if (this.animation) this.animation.update(this, timechange);
+      if (this.actor && this.actor.ai) this.actor.ai.update(this, timechange);
     },
     
     playAnimation: function(which, loop) {

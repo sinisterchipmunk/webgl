@@ -1,0 +1,192 @@
+<script>
+  <%content_for :global do%>
+  var contexts = [];
+  var point_world0, point_world1, cube_world0, cube_world1, sphere_world0, sphere_world1;
+  var $MODE = 0;
+  
+  function setTestMode(which, ele)
+  {
+    ele.checked = true;
+    switch(which) {
+      case 0: // points
+        $MODE = 0;
+        contexts[0].world = point_world0;
+        contexts[1].world = point_world1;
+        break;
+      case 1: // cubes
+        $MODE = 1;
+        contexts[0].world = cube_world0;
+        contexts[1].world = cube_world1;
+        break;
+      case 2: // spheres
+        $MODE = 2;
+        contexts[0].world = sphere_world0;
+        contexts[1].world = sphere_world1;
+        break;
+      default:
+        alert("internal error!");
+    }
+  }
+  
+  function updateKeyboardInput()
+  {
+    logger.attempt("update keyboard input", function() {
+      var rotation = [0,0,0];
+      var translation = [0,0,0];
+      var movement_speed = 1.5; // in GL units per second
+      var rotation_speed = 0.5;
+      var strafing_speed = 1.0;
+    
+      movement_speed *= 0.15; // we multiply by time passed. For any real world application we'd not rely on
+      rotation_speed *= 0.15; // setInterval and we'd calculate actual time elapsed instead.
+      strafing_speed *= 0.15;
+    
+      if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
+      if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
+      if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
+      if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[87]) translation[2] += 1; // W
+      if (currentlyPressedKeys[83]) translation[2] -= 1; // S
+      if (currentlyPressedKeys[65]) translation[0] -= 1; // A
+      if (currentlyPressedKeys[68]) translation[0] += 1; // D
+    
+      if (translation[2] != 0) contexts[0].world.camera.move(translation[2]*movement_speed);
+      if (translation[0] != 0) contexts[0].world.camera.strafe(translation[0]*strafing_speed);
+      if (rotation.magnitude() > 0) contexts[0].world.camera.rotateView(rotation);
+    });
+  }
+  
+  function initWorlds()
+  {
+    var x = 0, y = 0, z = 0;
+    for (x = -10; x < 10; x += 2)
+    {
+      for (z = -10; z < 10; z += 2)
+      {
+        var p = new Point(x, y, z);
+        point_world0.addObject(p);
+        point_world1.addObject(p);
+    
+        var s = new Sphere(0.5);
+        s.orientation.setPosition(x, y, z);
+        sphere_world0.addObject(s);
+        sphere_world1.addObject(s);
+    
+        var c = new Cube([1,1,0.5], [x, y, z]);
+        cube_world0.addObject(c);
+        cube_world1.addObject(c);
+      }
+    }
+  }
+  <%end%>
+  
+  <%content_for :init do%>
+    contexts[0] = new WebGLContext('canvas0', <%=shaders.to_json%>);
+    contexts[1] = new WebGLContext('canvas1', <%=shaders.to_json%>);
+          
+    setInterval(updateKeyboardInput, 30);
+  
+    //instantiate 6 worlds: one for point, cube and sphere, for each context
+    point_world0  = new World(contexts[0]);
+    point_world1  = new World(contexts[1]);
+    cube_world0   = new World(contexts[0]);
+    cube_world1   = new World(contexts[1]);
+    sphere_world0 = new World(contexts[0]);
+    sphere_world1 = new World(contexts[1]);
+  
+    initWorlds();
+  
+    // share camera instances across worlds for each context
+    point_world0.camera = cube_world0.camera = sphere_world0.camera; 
+    point_world1.camera = cube_world1.camera = sphere_world1.camera; 
+
+    contexts[0].render = drawScene; // use our custom render method
+    contexts[0].world = point_world0;
+    contexts[0].world.camera.translateTo(0,0,10);
+    contexts[0].world.camera.perspective(contexts[0].gl, {far:10});
+  
+    contexts[1].world = point_world1;
+    contexts[1].world.camera.translateTo(0,50,10);
+    contexts[1].world.camera.lookAt(0,0,0);
+    contexts[1].world.camera.perspective(contexts[1].gl, {far:600});
+  
+    // add the frustum renderables to the fixed worlds
+    point_world1.addObject(contexts[0].world.camera.getFrustum().getRenderable());
+    cube_world1.addObject(contexts[0].world.camera.getFrustum().getRenderable());
+    sphere_world1.addObject(contexts[0].world.camera.getFrustum().getRenderable());
+  
+    setTestMode(0, $("test-points"));
+  <%end%>
+        
+  <%content_for :render do%>
+    // world#render doesn't yet use the frustum (and I'm not sure it should be made to)
+    // so we need to override it and supply our own.
+//    contexts[0].world.render();
+    contexts[0].world.camera.look(contexts[0].gl);
+  
+    var count = 0;
+    contexts[0].world.each_object(function(obj) {
+      var render = false;
+      switch($MODE) {
+        case 0: // points
+          if (contexts[0].world.camera.frustum.pointVisible(obj.orientation.getPosition())) render = true;
+          break;
+        case 1: // cubes
+          if (contexts[0].world.camera.frustum.cubeVisible(obj.getCorners())) render = true;
+          break;
+        case 2: // spheres
+          if (contexts[0].world.camera.frustum.sphereVisible(obj.orientation.getPosition(), obj.radius)) render = true;
+          break;
+      }
+      if (render) { obj.render({context:contexts[0]}); count++; }
+    });
+    $("num-quads").update("Count: "+count);
+  <%end%>
+</script>
+
+
+<%content_for :style do%>
+  .titlebar { text-align:center; background-color: #00a; color: #fff; font-weight:800; font-family:sans-serif; }
+  .canvas-left {  width:400px;height:425px; border:1px solid #ccc; float:left; }
+  .canvas-center#main { float:left; width:400px;height:702px;border:1px solid #ccc; }
+  #canvas { display: none; }
+<%end%>
+
+<div style="float:left;">
+  <div class="canvas-left">
+    <div class="titlebar">
+      Variable
+    </div>
+    <canvas id="canvas0" width="400" height="400"></canvas>
+  </div>
+  <div class="canvas-left">
+    <div class="titlebar">
+      Fixed
+    </div>
+    <canvas id="canvas1" width="400" height="400"></canvas>
+  </div>
+</div>
+
+<p>This demo tests the Frustum by checking the number of objects visible on-screen. The test is working properly if
+the number objects on-screen (you need to count them) matches the number reflected below:</p>
+<span id="num-quads">0</span>
+<p>The point test actually uses spheres because I was too lazy to figure out points in WebGL (GL_POINTS doesn't work);
+that said, the test actually does use only the point position, which is the center of the sphere. If the center of the
+sphere is off-screen, the test will fail and the entire sphere will be omitted. So don't be fooled by the point test.</p>
+<p>
+  (<input type="radio" name="mode" id="test-points" checked onclick='setTestMode(0, this);' /> Points)
+  (<input type="radio" name="mode" onclick='setTestMode(1, this);' /> Cubes)
+  (<input type="radio" name="mode" onclick='setTestMode(2, this);' /> Spheres)
+</p>
+
+<p>
+Be aware that this demo runs very slowly by design. It's not because frustum culling is particularly slow (although it
+<em>is</em> slow!) but rather because we're doing a lot of things that are unnecessary in a practical application.
+Consider: for every object in the scene, we're first checking it against the frustum for context 1, then rendering it
+regardless of the frustum result for context 2. Also, realistically, you'd use a higher-level culling mechanism such as
+an octree; you'd use that to eliminate groups of objects rather than checking every object individually.
+</p>
+<p>
+We're also maintaining a total of 6 worlds (3 per context, 2 contexts). I have no idea what the performance implications
+of doing this are. I was a bit surprised it worked at all, tbh.
+</p>

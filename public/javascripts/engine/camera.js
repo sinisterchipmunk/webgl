@@ -15,7 +15,11 @@ function Camera(options)
   var pmatrix = null;
   matrix.setLookAt(position, view, up, right);
   
-  self.callbacks = {};
+  self.callbacks = self.callbacks || { 
+    orientation_changed: function() { self.fireCallbacks('orientation'); },
+    position_changed: function(pos, vec) { self.fireCallbacks('position', [pos, vec]); }
+  };
+
   self.lock_up_vector = options.lock_up_vector || default_options.lock_up_vector;
   self.lock_y_axis    = options.lock_y_axis    || default_options.lock_y_axis;
 
@@ -25,6 +29,12 @@ function Camera(options)
   self.getUp       = function() { return up;       };
   self.getPosition = function() { return position; };
   self.getRight    = function() { return right;    };
+  
+  self.getFrustum = function() {
+    if (self.frustum) return self.frustum;
+    self.frustum = new Frustum(self.getMatrix(), self.getProjectionMatrix());
+    return self.frustum;
+  };
   
   self.setPosition = function(vec, y, z) {
     if (typeof(vec) == "number") vec = [vec, y, z];
@@ -38,6 +48,8 @@ function Camera(options)
     view  = vec.normalize();
     right = view.cross(up).normalize();
     up    = right.cross(view).normalize();
+    self.look();
+    self.getFrustum().update();
     if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
@@ -47,6 +59,8 @@ function Camera(options)
     up = vec.normalize();
     right = view.cross(up).normalize();
     view = up.cross(right).normalize();
+    self.look();
+    self.getFrustum().update();
     if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
@@ -56,6 +70,8 @@ function Camera(options)
     right = vec.normalize();
     view = up.cross(right).normalize();
     up = right.cross(view).normalize();
+    self.look();
+    self.getFrustum().update();
     if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
     return self;
   };
@@ -67,6 +83,7 @@ function Camera(options)
    */
   self.look = function(gl) {
     matrix.setLookAt(position, view, up, right);
+    self.getFrustum().setModelviewMatrix(matrix);
     if (gl) self.lookGL(gl);
     return self;
   };
@@ -76,7 +93,7 @@ function Camera(options)
    */
   self.lookGL = function(gl) {
     setMatrix(matrix);
-    if (!pmatrix) self.perspective(45, gl);
+    if (!pmatrix) self.perspective(gl);
     setPMatrix(pmatrix);
   };
   
@@ -111,13 +128,22 @@ function Camera(options)
     options.far  = options.far  || 200;
 
     pmatrix = makeOrtho(options.left, options.right, options.bottom, options.top, options.near, options.far);
+    self.getFrustum().setProjectionMatrix(pmatrix);
   };
   
-  self.perspective = function(fov, gl)
+  self.perspective = function(gl, options)
   {
+    if (!options) options = {};
+    
+    options.fov  = options.fov  || 45;
+    options.near = options.near || 0.1;
+    options.far  = options.far  || 200.0;
+    options.ratio = options.ratio || (parseFloat(gl.viewportWidth) / parseFloat(gl.viewportHeight));
+    
     if (!gl) throw new Error("No WebGL context given!");
     if (gl.gl) gl = gl.gl;
-    pmatrix = makePerspective(fov, gl.viewportWidth / gl.viewportHeight, 0.1, 200.0);
+    pmatrix = makePerspective(options.fov, options.ratio, options.near, options.far);
+    self.getFrustum().setProjectionMatrix(pmatrix);
   };
   
   /* Explicitly sets this Camera's orientation. This is a dangerous function, because it does NOT do any
@@ -131,9 +157,28 @@ function Camera(options)
     view = viewVec.normalize();
     up = upVec.normalize();
     right = (rightVec || view.cross(up)).normalize();
+    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
+    if (positionVec)
+      if (self.callbacks && self.callbacks.position_changed) self.callbacks.position_changed(position, positionVec);
     position = positionVec || position;
     self.look();
+    self.getFrustum().update();
     return self;
+  };
+  
+  self.addListener = self.addCallback = function(name, func) {
+    self.callbacks[name] = self.callbacks[name] || [];
+    self.callbacks[name].push(func);
+  };
+  
+  self.fireCallbacks = function(name, args) {
+    if (self.callbacks[name])
+    {
+      for (var i = 0; i < self.callbacks[name].length; i++)
+      {
+        self.callbacks[name][i](args);
+      }
+    }
   };
 }
 
@@ -145,6 +190,7 @@ Camera.prototype.lookAt = function(vec, y, z) {
   var new_view = vec.minus(this.getPosition());
   this.setView(new_view);
   this.look();
+  this.getFrustum().update();
   return this;
 };
 
@@ -201,7 +247,8 @@ Camera.prototype.rotateView = function(amount_x, amount_y, amount_z) {
   
   this.orient(view, up, right);
   this.look();
-  if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
+  this.getFrustum().update();
+//  if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
   return this;
 };
 
@@ -217,6 +264,7 @@ Camera.prototype.strafe = function(distance, vec, y, z)
   
   this.setPosition(this.getPosition().plus(direction));
   this.look();
+  this.getFrustum().update();
   return this;
 };
 
@@ -232,6 +280,7 @@ Camera.prototype.move = function(distance, vec, y, z)
   
   this.setPosition(this.getPosition().plus(direction));
   this.look();
+  this.getFrustum().update();
   return this;
 };
 
@@ -248,6 +297,7 @@ Camera.prototype.reset = function()
   this.orient(view, up, right);
   this.setPosition(position);
   this.look(); // update the matrix with these values
+  this.getFrustum().update();
   return this;
 };
 

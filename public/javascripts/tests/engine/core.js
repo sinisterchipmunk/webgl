@@ -16,4 +16,8 @@ after_initialize(function() {
     var index = log.toString().indexOf("During 'one' =&gt; 'two': Error: error");
     assert(index < 100 && index != -1);
   }
+  
+  var arr = [0,1,0];
+  assert([0,1,0].equals(arr), "array doesn't equal a copy of itself");
+  assert(![0,0,1].equals(arr), "array equals an array with different elements");
 });

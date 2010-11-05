@@ -25,7 +25,7 @@ class EngineTestsController < ApplicationController
   
   def interface
     dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line" << "models/actor" <<
-            "models/creature" << "models/ai" << "engine/animation"
+            "models/creature" << "models/ai" << "engine/animation" << "objects/axis"
     
     scene = HeightMap.new("/images/height.png",
                           :texture => { :path => "/images/textures/poormansgrass.png", :scale => 3 },
@@ -83,6 +83,15 @@ class EngineTestsController < ApplicationController
             "objects/renderable"
   end
   
+  def orientation
+    dependencies << "objects/quad" << "objects/axis"
+    
+    @quad = WebGL::Quad.new(3,3)
+
+    world.camera.position = [10,10,10]
+    world.camera.look_at = [0,0,0]
+  end
+  
   def skeleton
     dependencies << 'objects/skeleton' << 'tests/objects/skeleton'
   end
@@ -95,9 +104,13 @@ class EngineTestsController < ApplicationController
     dependencies << 'objects/md2' << 'tests/objects/md2'
   end
   
+  def frustum
+    dependencies << "objects/quad" << "engine/frustum" << "objects/cube" << "objects/sphere" << "objects/point"
+  end
+  
   def creatures
     dependencies << "models/creature" << "objects/md2" << "engine/animation" << "models/actor" << "models/creature" <<
-            "engine/animation"
+            "engine/animation" << "models/ai"
     
     world.camera.position = [0,0,10]
     

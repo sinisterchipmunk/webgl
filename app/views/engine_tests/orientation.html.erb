@@ -1,0 +1,17 @@
+<script>
+  <%content_for :init do%>
+    var quad = <%=@quad%>;
+    var axis = new Axis(quad.orientation, [0,2,0]);
+    world.addObject(quad);
+    world.addObject(axis);
+    quad.update = function(timechange) {
+      quad.orientation.rotateView(0, timechange);
+    };
+  <%end%>
+</script>
+
+<p>This test is used to verify that the object is facing the direction it looks like it's facing. This asserts that
+the model and the camera are both pointing the same way. Otherwise we end up with characters running sideways, etc.</p>
+<p>If the test is working properly, both the quad and its axes should be rotating at the same speed, in the same
+direction. The blue line represents its view vector, the red its right, and the geen its up. The axes should be
+positioned just above the quad.</p>

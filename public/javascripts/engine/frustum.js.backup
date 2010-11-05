@@ -1,0 +1,172 @@
+/*
+  Code adapted from:
+    http://www.flipcode.com/archives/Frustum_Culling.shtml
+    
+    and
+    
+    http://www.lighthouse3d.com/opengl/viewfrustum/index.php?gatest
+*/
+
+var Frustum = (function() {
+  var OUTSIDE = 1, INSIDE = 2, INTERSECT = 3;
+  
+  var Plane = Class.create({
+    initialize: function() { },
+    normal:function() { return [this[0], this[1], this[2]]; },
+    distance: function() { return this[3]; },
+    distanceFrom: function(point) { return this.normal().dot(point) + this.distance(); },
+    whereis: function(point) {
+      if (this.distanceFrom(point) < 0) return Plane.BEHIND;
+      else return Plane.IN_FRONT;
+    }
+  });
+  
+  Plane.IN_FRONT = 1;
+  Plane.BEHIND = 2;
+  
+  function initPlanes(self) {
+    self.planes = self.planes || {};
+    self.planes.left   = self.planes.left   || new Plane();
+    self.planes.right  = self.planes.right  || new Plane();
+    self.planes.top    = self.planes.top    || new Plane();
+    self.planes.bottom = self.planes.bottom || new Plane();
+    self.planes.near   = self.planes.near   || new Plane();
+    self.planes.far    = self.planes.far    || new Plane();
+  }
+  
+  function setPlaneValues(plane, x, y, z, w)
+  {
+    // first normalize the result
+    var mag = Math.sqrt(x*x+y*y+z*z);
+    x /= mag;
+    y /= mag;
+    z /= mag;
+    w /= mag;
+    plane[0] = x;
+    plane[1] = y;
+    plane[2] = z;
+    plane[3] = w;
+  }
+  
+  function updateClip(self) {
+    initPlanes(self);
+    var clip = (self.clip = self.clip || {}), m = self.mv.flatten(), p = self.p.flatten();
+    var near = self.planes.near, far    = self.planes.far,
+        top  = self.planes.top,  bottom = self.planes.bottom,
+        left = self.planes.left, right  = self.planes.right;
+    
+    clip[ 0] = m[ 0] * p[ 0] + m[ 1] * p[ 4] + m[ 2] * p[ 8] + m[ 3] * p[12];
+    clip[ 1] = m[ 0] * p[ 1] + m[ 1] * p[ 5] + m[ 2] * p[ 9] + m[ 3] * p[13];
+    clip[ 2] = m[ 0] * p[ 2] + m[ 1] * p[ 6] + m[ 2] * p[10] + m[ 3] * p[14];
+    clip[ 3] = m[ 0] * p[ 3] + m[ 1] * p[ 7] + m[ 2] * p[11] + m[ 3] * p[15];
+
+    clip[ 4] = m[ 4] * p[ 0] + m[ 5] * p[ 4] + m[ 6] * p[ 8] + m[ 7] * p[12];
+    clip[ 5] = m[ 4] * p[ 1] + m[ 5] * p[ 5] + m[ 6] * p[ 9] + m[ 7] * p[13];
+    clip[ 6] = m[ 4] * p[ 2] + m[ 5] * p[ 6] + m[ 6] * p[10] + m[ 7] * p[14];
+    clip[ 7] = m[ 4] * p[ 3] + m[ 5] * p[ 7] + m[ 6] * p[11] + m[ 7] * p[15];
+
+    clip[ 8] = m[ 8] * p[ 0] + m[ 9] * p[ 4] + m[10] * p[ 8] + m[11] * p[12];
+    clip[ 9] = m[ 8] * p[ 1] + m[ 9] * p[ 5] + m[10] * p[ 9] + m[11] * p[13];
+    clip[10] = m[ 8] * p[ 2] + m[ 9] * p[ 6] + m[10] * p[10] + m[11] * p[14];
+    clip[11] = m[ 8] * p[ 3] + m[ 9] * p[ 7] + m[10] * p[11] + m[11] * p[15];
+
+    clip[12] = m[12] * p[ 0] + m[13] * p[ 4] + m[14] * p[ 8] + m[15] * p[12];
+    clip[13] = m[12] * p[ 1] + m[13] * p[ 5] + m[14] * p[ 9] + m[15] * p[13];
+    clip[14] = m[12] * p[ 2] + m[13] * p[ 6] + m[14] * p[10] + m[15] * p[14];
+    clip[15] = m[12] * p[ 3] + m[13] * p[ 7] + m[14] * p[11] + m[15] * p[15];
+    
+    setPlaneValues(right, clip[3] - clip[0], clip[7] - clip[4], clip[11] - clip[8],  clip[15] - clip[12]);
+    setPlaneValues(left,  clip[3] + clip[0], clip[7] + clip[4], clip[11] + clip[8],  clip[15] + clip[12]);
+    setPlaneValues(bottom,clip[3] + clip[1], clip[7] + clip[5], clip[11] + clip[9],  clip[15] + clip[13]);
+    setPlaneValues(top,   clip[3] - clip[1], clip[7] - clip[5], clip[11] - clip[9],  clip[15] - clip[13]);
+    setPlaneValues(far,   clip[3] - clip[2], clip[7] - clip[6], clip[11] - clip[10], clip[15] - clip[14]);
+    setPlaneValues(near,  clip[3] + clip[2], clip[7] + clip[6], clip[11] + clip[10], clip[15] + clip[14]);
+  }
+  
+  var klass = Class.create({
+    initialize: function(modelview, projection) {
+      this.setMatrices(modelview, projection);
+    },
+    
+    update: function() { if (this.mv && this.p) updateClip(this); },
+    setModelviewMatrix: function(mv) { this.setMatrices(mv, this.p); },
+    setProjectionMatrix: function(p) { this.setMatrices(this.mv, p); },
+    
+    setMatrices: function(mv, p) {
+      this.mv = mv;
+      this.p  = p;
+      this.update();
+    },
+    
+    sphere: function(center, radius)
+    {
+      if (arguments.length == 4) { center = [arguments[0], arguments[1], arguments[2]]; radius = arguments[3]; }
+      var fdistance;
+      
+      this.each_plane(function(name, plane) {
+        fdistance = plane.distanceFrom(center);
+        if (fdistance < -radius) return OUTSIDE;            // if distance < -sphere.radius, sphere is outside frustum
+        if (Math.abs(fdistance) < radius) return INTERSECT; // if distance is within +-radius, sphere intersects frustum
+      });
+      // otherwise sphere is fully in view
+      return INSIDE;
+    },
+    
+    cube: function(corners) {
+//      logger.info(this.planes.toSource());
+      var i, totalIn = 0;
+      if (arguments.length == 8)
+        for (i = 0; i < 8; i++) corners[i] = arguments[i];
+      else if (arguments.length == 24)
+        for (i = 0; i < 8; i++) corners[i] = [arguments[i*3],arguments[i*3+1],arguments[i*3+2]];
+      
+      // test all 8 corners against the 6 sides
+      // if all points are behind a single plane, it is outside
+      // if all points are in front of a single plane, it is inside
+      this.each_plane(function(name, plane) {
+        var inCount = 8, ptIn = 1;
+        for (i = 0; i < 8; i++)
+          // test this point against the plane
+          if (plane.whereis(corners[i]) == Plane.BEHIND)
+          {
+            ptIn = 0;
+            inCount--;
+          }
+        
+        // were all the points outside of plane p?
+        if (inCount == 0) return OUTSIDE;
+        totalIn += ptIn;
+      });
+      
+      // so if totalIn == 6, then all points are inside
+      if (totalIn == 6) return INSIDE;
+      
+      // ...otherwise, we must be intersecting
+      return INTERSECT;
+    },
+    
+    point: function(point) {
+      if (arguments.length == 3) point = [arguments[0], arguments[1], arguments[2]];
+      this.each_plane(function(name, plane) { if (plane.distanceFrom(point) < 0) return OUTSIDE; });
+      return INSIDE;
+    },
+    
+    isSphereVisible: function(center, radius) { return this.sphere.apply(this, arguments) != OUTSIDE; },
+    isPointVisible:  function(center)         { return this.point.apply(this, arguments)  != OUTSIDE; },
+    isCubeVisible:   function(corners)        { return this.cube.apply(this, arguments)   != OUTSIDE; },
+    
+    each_plane: function(func) {
+      func("left",   this.planes.left);
+      func("right",  this.planes.right);
+      func("top",    this.planes.top);
+      func("bottom", this.planes.bottom);
+      func("near",   this.planes.near);
+      func("far",    this.planes.far);
+    }
+  });
+  
+  klass.OUTSIDE   = OUTSIDE;
+  klass.INSIDE    = INSIDE;
+  klass.INTERSECT = INTERSECT;
+  return klass;
+})();

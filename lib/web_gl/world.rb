@@ -1,9 +1,20 @@
 class WebGL::World
   class Camera
-    attr_accessor :right, :up, :view, :position
+    attr_accessor :right, :up, :view, :position, :look_at
     
     def changed?
-      right || up || view || position
+      orientation_changed? || position || look_at
+    end
+    
+    def orientation_changed?
+      right || up || view
+    end
+    
+    def js_lookat(name)
+      result = ""
+      result.concat "#{name}.setPosition([#{position.join(",")}]);" if (position)
+      result.concat "#{name}.lookAt([#{look_at.join(",")}]);" if look_at
+      result
     end
     
     def js_orient(name)
@@ -29,8 +40,10 @@ class WebGL::World
   
   def to_js
     js = "(function(){var world=new World();"
-    if camera.changed?
+    if camera.orientation_changed?
       js.concat "#{camera.js_orient('world.camera')};"
+    elsif camera.changed?
+      js.concat "#{camera.js_lookat('world.camera')};"
     end
     
     if @scene

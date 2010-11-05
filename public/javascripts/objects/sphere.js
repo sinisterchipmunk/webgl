@@ -14,6 +14,21 @@ var Sphere = Class.create(Renderable, {
     this.stacks = options.stacks;
     this.slices = options.slices;
     $super();
+    
+    
+    /* what's wrong with this?
+    
+    var default_options = { stacks: 30, slices: 30 };
+    if (typeof(options) == "number") options = { radius:options };
+    if (arguments.length > 1) options.position = arguments[1];
+    
+    this.radius = options.radius || default_options.radius;
+    this.stacks = options.stacks || default_options.stacks;
+    this.slices = options.slices || default_options.slices;
+    $super();
+    if (options.position) this.orientation.setPosition(options.position);
+    
+     */
   },
   
   init: function(vertices, colors, textureCoords, normals, indices) {

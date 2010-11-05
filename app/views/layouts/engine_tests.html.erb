@@ -13,6 +13,8 @@
   <script type="text/javascript" src="/javascripts/engine/core.js"></script>
   <script type="text/javascript" src="/javascripts/engine/assertions.js"></script>
   <script type="text/javascript" src="/javascripts/engine/vector.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/plane.js"></script>
+  <script type="text/javascript" src="/javascripts/engine/frustum.js"></script>
   <script type="text/javascript" src="/javascripts/engine/camera.js"></script>
   <script type="text/javascript" src="/javascripts/engine/shader.js"></script>
   <script type="text/javascript" src="/javascripts/engine/world.js"></script>
@@ -169,13 +171,15 @@
   </style>
 </head>
   <body onload="webGLStart();">
+
     <div id="framerate" style="float:left;width:100px;">Calculating...</div>
-    <div style="float:left;width:100px;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
-    <div style="clear:right;"><%=link_to "Back to Index", :action => 'index'%></div>
-    <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
+      <div style="float:left;width:100px;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+      <div style="clear:right;"><%=link_to "Back to Index", :action => 'index'%></div>
+      <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
     </div>
     <canvas id="canvas" style="border: none;" width="800" height="500"></canvas>
     <%=yield%>
+    
     <p>
       <%=link_to "See the Source Code", File.join("http://github.com/sinisterchipmunk/webgl/tree/master/app/views/",
                                                   params[:controller], "#{params[:action]}.html.erb")%>
@@ -185,5 +189,7 @@
       Although designed for Firefox, all demos have been tested with Chrome and Safari. Be sure to use a WebGL-enabled
       browser or they'll fail.
     </p>
+    
+    <%=render :partial => 'engine_tests/comments'%>
   </body>
 </html>

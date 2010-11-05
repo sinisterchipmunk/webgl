@@ -98,7 +98,8 @@ var HeightMap = function() {
         if (newPosition[0] > this.width()) newPosition[0] = this.width();
         if (newPosition[2] < 0) newPosition[2] = 0;
         if (newPosition[2] > this.depth()) newPosition[0] = this.depth();
-        newPosition[1] = this.height(newPosition[0], newPosition[2])*this.scale - object.lowest();
+        newPosition[1] = this.height(parseInt(newPosition[0] / this.scale), parseInt(newPosition[2] / this.scale))*this.scale - object.lowest();
+        if (isNaN(newPosition[1])) newPosition[1] = 0;
       }
       else
         // not available? means vertex data hasn't initialized yet; need to retry after render.

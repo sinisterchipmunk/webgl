@@ -30,7 +30,14 @@ function Logger(name)
   self.autoupdate = true;
   self.level = Logger.INFO;
   
-  function update() { if ($(self.name) && self.autoupdate) $(self.name).update(self.toString()); }
+  function update() {
+    if ($(self.name) && self.autoupdate)
+    {
+      var string = self.toString();
+      if (string.length > 65536) string = string.substring(0, 65536);
+      $(self.name).update(string);
+    }
+  }
   
   function getLine() {
     var e = new Error();

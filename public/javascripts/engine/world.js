@@ -52,6 +52,11 @@ World.prototype = {
     mvPopMatrix();
   },
   
+  each_object: function(func) {
+    for (var i in this.objects)
+      func(this.objects[i]);
+  },
+  
   renderObjects: function(mode) {
     for (var i in this.objects)
       if (this.objects[i])

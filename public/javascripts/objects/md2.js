@@ -221,6 +221,26 @@ var MD2 = function() {
       });
     },
     
+    moveOrigin: function(x, y, z)
+    {
+      var i;
+      
+      for (var f = 0; f < this.model_data.frames.length; f++)
+      {
+        var frame = this.model_data.frames[f];
+        for (i = 0; i < frame.vertices.length; i += 3)
+        {
+          frame.vertices[i  ] += x;
+          frame.vertices[i+1] += y;
+          frame.vertices[i+2] += z;
+        }
+      }
+      
+      this.mesh.lowest_point = (void 0);
+      initSnapshot(this);
+      this.invalidate();
+    },
+    
     setScale: function(scale)
     {
       // update the current snapshot to reflect the new scale
@@ -353,10 +373,10 @@ MD2.load = function(model_name, success)
 
             // now rotate so it's in line with the camera (right now we're turned 90 degrees CCW around the Y axis)
             var x = frame.vertices[j], z = frame.vertices[j+2];
-            var theta = -Math.PI/2;
-            var vx = x * Math.cos(theta) - z * Math.sin(theta),
-                vz = x * Math.sin(theta) + z * Math.cos(theta);
-            frame.vertices[j] = vx;
+            var theta = Math.PI/2;
+            var vz = z * Math.cos(theta) - x * Math.sin(theta),
+                vx = z * Math.sin(theta) + x * Math.cos(theta);
+            frame.vertices[j]   = vx;
             frame.vertices[j+2] = vz;
           }
         }
@@ -542,9 +562,9 @@ for (var i = 0; i < MD2.normals.length; i++)
   
   // now rotate so it's in line with the camera (right now we're turned 90 degrees CCW around the Y axis)
   var x = MD2.normals[i][0], z = MD2.normals[i][2];
-  var theta = -Math.PI/2;
-  var vx = x * Math.cos(theta) - z * Math.sin(theta),
-      vz = x * Math.sin(theta) + z * Math.cos(theta);
+  var theta = Math.PI/2;
+  var vz = z * Math.cos(theta) - x * Math.sin(theta),
+      vx = z * Math.sin(theta) + x * Math.cos(theta);
   MD2.normals[i][0] = vx;
   MD2.normals[i][2] = vz;
   MD2.normals[i] = MD2.normals[i].normalize();

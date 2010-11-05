@@ -4,6 +4,7 @@ var Actor = Class.create(Renderable, {
     self.id = attributes.id;
     self.name = attributes.name;
     self.scale = attributes.scale || 1;
+    self.ai = AI.instance(attributes.ai);
     
     MD2.load(attributes.model.name, function(obj) {
       self.model = obj;
@@ -13,6 +14,7 @@ var Actor = Class.create(Renderable, {
         self.model.mesh.addTexture(attributes.model.textures[i].path);
       
       self.model.stop();
+//      self.model.moveOrigin(0, self.lowest(), 0);
       self.meshLoaded = true;
     });
             

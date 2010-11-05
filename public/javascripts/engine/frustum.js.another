@@ -1,0 +1,200 @@
+/*
+  Source code adapted from:
+    http://www.lighthouse3d.com/opengl/viewfrustum/index.php?gimp
+ */
+var Frustum = (function() {
+  var INSIDE = 1, OUTSIDE = 2, INTERSECT = 3;
+  var TOP = 0, BOTTOM = 1, LEFT = 2, RIGHT = 3, NEAR = 4, FAR = 5;
+  
+  /* TODO extract this into plane.js */
+  var Plane = Class.create({
+    initialize: function(points) {
+      if (arguments.length == 3) points = [arguments[0], arguments[1], arguments[2]];
+      else if (arguments.length == 9) points = [[arguments[0],arguments[1],arguments[2]],
+                                                [arguments[3],arguments[4],arguments[5]],
+                                                [arguments[6],arguments[7],arguments[8]]];
+      
+      if (points) this.set(points);
+    },
+    
+    set: function(points)
+    {
+      if (arguments.length == 3) points = [arguments[0], arguments[1], arguments[2]];
+      else if (arguments.length == 9) points = [[arguments[0],arguments[1],arguments[2]],
+                                                [arguments[3],arguments[4],arguments[5]],
+                                                [arguments[6],arguments[7],arguments[8]]];
+      
+      var aux1 = points[0].minus(points[1]), aux2 = points[3].minus(points[2]);
+      this.normal = aux2.cross(aux1).normalize();
+      this.point = points[1];
+      this.d = -(this.normal.innerProduct(this.point));
+    },
+    
+    setCoefficients: function(a, b, c, d)
+    {
+      this.normal[0] = a;
+      this.normal[1] = b;
+      this.normal[2] = c;
+      var l = this.normal.magnitude();
+      this.normal[0] /= l;
+      this.normal[1] /= l;
+      this.normal[2] /= l;
+      this.d = d / l;
+    },
+    
+    distanceFrom: function(point) {
+      if (arguments.length == 3) point = [arguments[0], arguments[1], arguments[2]];
+      return this.d + this.normal.innerProduct(point);
+    }
+  });
+  
+  var klass = Class.create({
+    initialize: function()
+    {
+      this.planes = {};
+      this.near_points = {};
+      this.far_points = {};
+    },
+    
+    setCamInternal: function(angle, ratio, near, far)
+    {
+      this.ratio = ratio;
+      this.angle = angle;
+      this.near = near;
+      this.far = far;
+      
+      var tang = Math.tan(angle * (Math.PI / 180) * 0.5);
+      this.near_points.height = tang * near;
+      this.near_points.width  = ratio* this.near_points.height;
+      this.far_points.height  = tang * far;
+      this.far_points.width   = ratio* this.far_points.height;
+    },
+    
+    setCamDef: function(p, l, u)
+    {
+      var dir, nc, fc, X, Y, Z;
+      Z = p.minus(l).normalize();
+      X = u.cross(Z).normalize();
+      Y = Z.cross(X);
+      
+      nc = p.minus(Z).cross(this.near);
+      fc = p.minus(Z).cross(this.far);
+      this.near_points.top_left     = nc.plus(Y.times(this.near_points.height)).minus(X.times(this.near_points.width));
+      this.near_points.top_right    = nc.plus(Y.times(this.near_points.height)).plus(X.times(this.near_points.width));
+      this.near_points.bottom_left  = nc.minus(Y.times(this.near_points.height)).minus(X.times(this.near_points.width));
+      this.near_points.bottom_right = nc.minus(Y.times(this.near_points.height)).plus(X.times(this.near_points.width));
+
+      this.far_points.top_left     = fc.plus( Y.times(this.far_points.height)).minus(X.times(this.far_points.width));
+      this.far_points.top_right    = fc.plus( Y.times(this.far_points.height)).plus(X.times(this.far_points.width));
+      this.far_points.bottom_left  = fc.minus(Y.times(this.far_points.height)).minus(X.times(this.far_points.width));
+      this.far_points.bottom_right = fc.minus(Y.times(this.far_points.height)).plus(X.times(this.far_points.width));
+      
+      this.planes[TOP]    = (this.planes[TOP]    || new Plane()).set(this.near_points.top_right,   this.near_points.top_left,     this.far_points.top_left);
+      this.planes[BOTTOM] = (this.planes[BOTTOM] || new Plane()).set(this.near_points.bottom_left, this.near_points.bottom_right, this.far_points.bottom_right);
+      this.planes[LEFT]   = (this.planes[LEFT]   || new Plane()).set(this.near_points.top_left,    this.near_points.bottom_left,  this.far_points.top_left);
+      this.planes[RIGHT]  = (this.planes[RIGHT]  || new Plane()).set(this.near_points.bottom_right,this.near_points.top_right,    this.far_points.bottom_right);
+      this.planes[NEAR]   = (this.planes[NEAR]   || new Plane()).set(this.near_points.top_left,    this.near_points.top_right,    this.near_points.bottom_right);
+      this.planes[FAR]    = (this.planes[NEAR]   || new Plane()).set(this.far_points .top_right,   this.far_points .top_left,     this.far_points.bottom_left);
+    },
+    
+    point: function(point) {
+      if (arguments.length == 3) point = [arguments[0], arguments[1], arguments[2]];
+      for (var i = 0; i < 6; i++)
+        if (this.planes[i].distanceFrom(point) < 0)
+          return OUTSIDE;
+      return INSIDE;
+    },
+    
+    sphere: function(center, radius) {
+      if (arguments.length == 4) { center = [arguments[0], arguments[1], arguments[2]]; radius = arguments[3]; }
+      var result = INSIDE, distance;
+      for (var i = 0; i < 6; i++)
+      {
+        distance = this.planes[i].distanceFrom(center);
+        if (distance < -radius) return OUTSIDE;
+        else if (distance < radius) result = INTERSECT;
+      }
+      return result;
+    },
+    
+    cube: function(corners) {
+//      logger.info(this.planes.toSource());
+      var i, totalIn = 0;
+      if (arguments.length == 8)
+        for (i = 0; i < 8; i++) corners[i] = arguments[i];
+      else if (arguments.length == 24)
+        for (i = 0; i < 8; i++) corners[i] = [arguments[i*3],arguments[i*3+1],arguments[i*3+2]];
+
+      var result = INSIDE, out, inp;
+      for (i = 0; i < 6; i++)
+      {
+        out = inp = 0;
+        // for each of the corner of the box do...
+        // get out of the cycle as soon as a box has corners
+        // both inside and out of the frustum
+        for (var k = 0; k < 8 && (inp == 0 || out == 0); k++)
+        {
+          // is the corner outside or inside?
+          if (this.planes[i].distanceFrom(corners[k]) < 0) out++;
+          else inp++;
+        }
+        
+        // if all corners are out
+        if (!inp) return OUTSIDE;
+        // if some corners are out and others are in
+        else if (out) result = INTERSECT;
+      }
+      
+      return result;
+//      // test all 8 corners against the 6 sides
+//      // if all points are behind a single plane, it is outside
+//      // if all points are in front of a single plane, it is inside
+//      for (var p = 0; p < 6; p++)
+//      {
+//        var plane = this.planes[p];
+//        var inCount = 8, ptIn = 1;
+//        for (i = 0; i < 8; i++)
+//          // test this point against the plane
+//          if (plane.whereis(corners[i]) == Plane.BEHIND)
+//          {
+//            ptIn = 0;
+//            inCount--;
+//          }
+//        
+//        // were all the points outside of plane p?
+//        if (inCount == 0) return OUTSIDE;
+//        totalIn += ptIn;
+//      }
+//
+//      // so if totalIn == 6, then all points are inside
+//      if (totalIn == 6) return INSIDE;
+//      
+//      // ...otherwise, we must be intersecting
+//      return INTERSECT;
+//      
+//      var i, result = INSIDE;
+//      if (arguments.length == 8)       for (i = 0; i < 8; i++) corners[i] = arguments[i];
+//      else if (arguments.length == 24) for (i = 0; i < 8; i++) corners[i] = [arguments[i*3],arguments[i*3+1],arguments[i*3+2]];
+//      
+//      for (i = 0; i < 6; i++)
+//      {
+//        if (this.planes[i].distanceFrom(getVertexP(corners, this.planes[i].normal)) < 0)
+//          return OUTSIDE;
+//        else if (this.planes[i].distanceFrom(getVertexN(corners, this.planes[i].normal)) < 0)
+//          result = INTERSECT;
+//      }
+//      return result;
+    },
+    
+    isSphereVisible: function(center, radius) { return this.sphere.apply(this, arguments) != OUTSIDE; },
+    isPointVisible:  function(center)         { return this.point.apply(this, arguments)  != OUTSIDE; },
+    isCubeVisible:   function(corners)        { return this.cube.apply(this, arguments)   != OUTSIDE; }
+  });
+  
+  klass.INSIDE = INSIDE;
+  klass.OUTSIDE = OUTSIDE;
+  klass.INTERSECT = INTERSECT;
+  klass.Plane = Plane;
+  
+  return klass;
+})();

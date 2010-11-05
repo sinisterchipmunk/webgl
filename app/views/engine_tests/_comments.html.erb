@@ -1,0 +1,24 @@
+<div id="comments" style='clear:both;'>
+  <h2><a href="#" onclick="$('comments-hidden').toggle();return false;">Feedback</a></h2>
+  <%if flash[:notice]%>
+    <h3><%=flash[:notice]%></h3>
+  <%end%>
+  <div id="comments-hidden" style="display:none;">
+    Have something to say? Feel free!
+    
+    <%form_for Comment.new(:action => controller.action_name) do |f|%>
+      <%=f.hidden_field :action%>
+      <p>Name:<br/>
+      <%=f.text_field :name, :value => "Anonymous"%></p>
+      <p>Comment:<br/>
+      <%=f.text_area :body, :rows => 5, :cols => 60%></p>
+      <p><%=f.submit%></p>
+    <%end%>
+    
+    <%(Comment.find(:all, :conditions => { :action => controller.action_name }) || []).each do |comment|%>
+      <hr width='75%' />
+      <p><%=comment.name%> (on <%=comment.created_at%>)<br/>
+      <%=comment.body%></p>
+    <%end%>
+  </div>
+</div>

@@ -33,8 +33,11 @@ class WebGL::Renderable
       "new #{base_class}(#{js_arguments})"
     else
       "(function(){var r = new #{base_class}(#{js_arguments});r.render=#{js_render_function};return r;})()"
-    end
+    end.html_safe
   end
+  
+  
+  alias to_s to_js
   
   def js_init_function
     function(js_init)

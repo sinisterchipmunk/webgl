@@ -1,8 +1,9 @@
 var Quad = Class.create(Renderable, {
-  initialize: function($super, width, height) {
+  initialize: function($super, width, height, position) {
     this.width = width;
     this.height = height;
     $super();
+    if (position) this.orientation.setPosition(position);
   },
   
   setWidth: function(width) { this.setSize(width, this.height); },
