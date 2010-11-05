@@ -27,14 +27,7 @@ var Cube = (function() {
   
   return Class.create(Renderable, {
     getCorners: function() {
-      var corners = [];
-      for (var side in this.sides)
-      {
-        var verts = this.sides[side].getWorldSpaceVertices();
-        for (var i = 0; i < verts.length; i++)
-          corners.push(this.transformVertex(verts[i]));
-      }
-      return corners;
+      return this.getWorldSpaceVertices();
     },
     
     initialize: function($super, size, position)
@@ -46,12 +39,34 @@ var Cube = (function() {
       this.orientation.setPosition(position);
     },
     
-    draw: function(options)
-    { // pass the buck!
-      for (var side in this.sides)
-        this.sides[side].render(options);  
-    },
+    init: function(vertices, colors, texes, normals, indices)
+    {
+      // we need to get each quad's vertices, but then transform them by the object's
+      // local transformation, which includes the position offset and direction.
+      
+      var self = this;
+      for (var i in this.sides)
+      {
+        var qverts = [], qcolor = [], qtex = [];
+        this.sides[i].init(qverts, qcolor, qtex, [], []);
 
+        // unfortunately quads are rendered in triangle strips; we need to translate that
+        // into triangles, because there's no support at this time for ending one triangle
+        // strip and beginning another.
+        function push(verti) {
+          var i1 = verti*3, i2 = verti*3+1, i3 = verti*3+2;
+          var vert = self.sides[i].transformVertex([qverts[i1], qverts[i2], qverts[i3]]);
+          vertices.push(vert[0], vert[1], vert[2]);
+          if (qcolor.length != 0) colors.push(qcolor[i1], qcolor[i2], qcolor[i3]);
+          if (qtex.length   != 0) texes. push(qtex  [i1], qtex  [i2], qtex  [i3]);
+          /* TODO normals and per-face textures */
+        }
+        push(0); push(1); push(2); // tri1
+        push(1); push(2); push(3); // tri2
+      }
+      logger.info(vertices.toSource());
+    },
+    
     update: null // what's there to update?
   });
 })();

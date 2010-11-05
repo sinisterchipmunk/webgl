@@ -15,7 +15,8 @@ function Camera(options)
   var pmatrix = null;
   matrix.setLookAt(position, view, up, right);
   
-  self.callbacks = self.callbacks || { 
+  self.callbacks = self.callbacks || {
+    matrices_changed: function() { self.fireCallbacks('matrices'); },
     orientation_changed: function() { self.fireCallbacks('orientation'); },
     position_changed: function(pos, vec) { self.fireCallbacks('position', [pos, vec]); }
   };
@@ -29,12 +30,7 @@ function Camera(options)
   self.getUp       = function() { return up;       };
   self.getPosition = function() { return position; };
   self.getRight    = function() { return right;    };
-  
-  self.getFrustum = function() {
-    if (self.frustum) return self.frustum;
-    self.frustum = new Frustum(self.getMatrix(), self.getProjectionMatrix());
-    return self.frustum;
-  };
+  self.getFrustum  = function() { return self.frustum = self.frustum || new Frustum(self.getMatrix(), self.getProjectionMatrix()); };
   
   self.setPosition = function(vec, y, z) {
     if (typeof(vec) == "number") vec = [vec, y, z];
@@ -49,8 +45,7 @@ function Camera(options)
     right = view.cross(up).normalize();
     up    = right.cross(view).normalize();
     self.look();
-    self.getFrustum().update();
-    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
+    self.callbacks.orientation_changed();
     return self;
   };
   
@@ -60,8 +55,7 @@ function Camera(options)
     right = view.cross(up).normalize();
     view = up.cross(right).normalize();
     self.look();
-    self.getFrustum().update();
-    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
+    self.callbacks.orientation_changed();
     return self;
   };
   
@@ -71,8 +65,7 @@ function Camera(options)
     view = up.cross(right).normalize();
     up = right.cross(view).normalize();
     self.look();
-    self.getFrustum().update();
-    if (self.callbacks && self.callbacks.orientation_changed) self.callbacks.orientation_changed();
+    self.callbacks.orientation_changed();
     return self;
   };
   
@@ -82,8 +75,7 @@ function Camera(options)
      If gl is specified, this Camera will apply its matrix transformations to the given WebGL context.
    */
   self.look = function(gl) {
-    matrix.setLookAt(position, view, up, right);
-    self.getFrustum().setModelviewMatrix(matrix);
+    matrix.setLookAt(position, view, up, right, self.callbacks.matrices_changed);
     if (gl) self.lookGL(gl);
     return self;
   };
@@ -95,6 +87,7 @@ function Camera(options)
     setMatrix(matrix);
     if (!pmatrix) self.perspective(gl);
     setPMatrix(pmatrix);
+    if (!self.frustum.upToDate) self.frustum.fireListeners('update');
   };
   
   /*
@@ -128,7 +121,7 @@ function Camera(options)
     options.far  = options.far  || 200;
 
     pmatrix = makeOrtho(options.left, options.right, options.bottom, options.top, options.near, options.far);
-    self.getFrustum().setProjectionMatrix(pmatrix);
+    self.fireCallbacks('matrices');
   };
   
   self.perspective = function(gl, options)
@@ -143,7 +136,7 @@ function Camera(options)
     if (!gl) throw new Error("No WebGL context given!");
     if (gl.gl) gl = gl.gl;
     pmatrix = makePerspective(options.fov, options.ratio, options.near, options.far);
-    self.getFrustum().setProjectionMatrix(pmatrix);
+    self.fireCallbacks('matrices');
   };
   
   /* Explicitly sets this Camera's orientation. This is a dangerous function, because it does NOT do any
@@ -162,7 +155,6 @@ function Camera(options)
       if (self.callbacks && self.callbacks.position_changed) self.callbacks.position_changed(position, positionVec);
     position = positionVec || position;
     self.look();
-    self.getFrustum().update();
     return self;
   };
   
@@ -180,6 +172,18 @@ function Camera(options)
       }
     }
   };
+  
+  
+  function updateFrustum() {
+    if (self.frustum)
+    {
+      self.frustum.setMatrices(self.getMatrix(), self.getProjectionMatrix());
+      return self.frustum;
+    }
+    self.frustum = new Frustum(self.getMatrix(), self.getProjectionMatrix());
+    return self.frustum;
+  }
+  self.addListener("matrices", updateFrustum);
 }
 
 /* Sets the view to point at the specified position in world space. Up and right vectors are automatically

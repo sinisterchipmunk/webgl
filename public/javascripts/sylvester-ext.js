@@ -1,42 +1,41 @@
-Matrix.prototype.setLookAt = function(position, view, up, side) {
+/*
+  sets the matrix to look according to the given vectors. If callback is given,
+  it will be called only if the set values are different from the current ones.
+  Callbacks are fired after the matrix is updated, not before.
+ */
+Matrix.prototype.setLookAt = function(position, view, up, side, callback) {
   view = view.normalize();
   side = view.cross(up).normalize();
   up   = side.cross(view).normalize();
   
-//  this.elements = Matrix.I(4).elements;
+  var changed = false;
+  var e = this.elements;
   
-  this.elements[0][0] = side[0];
-  this.elements[1][0] = up[0];
-  this.elements[2][0] = -view[0];
-  this.elements[3][0] = 0;
+  function check_set(row, col, newval) {
+    if (e[row][col] != newval) { changed = true; e[row][col] = newval; }
+  }
   
-  this.elements[0][1] = side[1];
-  this.elements[1][1] = up[1];
-  this.elements[2][1] = -view[1];
-  this.elements[3][1] = 0;
+  check_set(0, 0,  side[0]);
+  check_set(1, 0,    up[0]);
+  check_set(2, 0, -view[0]);
+  check_set(3, 0,       0 );
+
+  check_set(0, 1,  side[1]);
+  check_set(1, 1,    up[1]);
+  check_set(2, 1, -view[1]);
+  check_set(3, 1,       0 );
+
+  check_set(0, 2,  side[2]);
+  check_set(1, 2,    up[2]);
+  check_set(2, 2, -view[2]);
+  check_set(3, 2,       0 );
+
+  check_set(0, 3,  -(side.dot(position)));
+  check_set(1, 3,  -(  up.dot(position)));
+  check_set(2, 3,   (view.dot(position)));
+  check_set(3, 3,      1.0);
   
-  this.elements[0][2] = side[2];
-  this.elements[1][2] = up[2];
-  this.elements[2][2] = -view[2];
-  this.elements[3][2] = 0;
-  
-  this.elements[0][3] = -(side.dot(position));
-  this.elements[1][3] = -(up.dot(position));
-  this.elements[2][3] =  (view.dot(position));
-  this.elements[3][3] = 1.0;
-  
-  
-//  // first load identity
-//  this.elements = Matrix.I(4).elements;
-//
-//  for (var i = 0; i < 3; i++)
-//  {
-//    this.elements[0][i] =  side[i];
-//    this.elements[1][i] =    up[i];
-//    this.elements[2][i] = -view[i];
-//  }
-//  
-//  return this.setTranslateTo(position);
+  if (changed) callback();
 };
 
 Matrix.prototype.setTranslateTo = function(position) {

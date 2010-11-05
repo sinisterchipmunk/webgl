@@ -52,12 +52,13 @@ var Frustum = (function() {
   
   var klass = Class.create({
     initialize: function(modelview, projection) {
+      this.listeners = {update:[]};
       this.planes = {};
       for (var i = 0; i < 6; i++) this.planes[i] = new Plane();
       this.setMatrices(modelview, projection);
     },
     
-    update: function() { if (this.mv && this.p) extractFrustum(this); },
+    update: function() { if (this.mv && this.p) { extractFrustum(this); this.fireListeners('update'); } },
     setModelviewMatrix: function(mv) { this.setMatrices(mv, this.p); },
     setProjectionMatrix: function(p) { this.setMatrices(this.mv, p); },
     
@@ -111,15 +112,24 @@ var Frustum = (function() {
       return (c2 == 6) ? INSIDE : INTERSECT;
     },
     
+    addUpdateListener: function(callback) { this.listeners.update.push(callback); },
     sphereVisible: function(center, radius) { return this.sphere.apply(this, arguments) != OUTSIDE; },
     pointVisible:  function(center)         { return this.point.apply(this, arguments)  != OUTSIDE; },
     cubeVisible:   function(corners)        { return this.cube.apply(this, arguments)   != OUTSIDE; },
+    
+    fireListeners: function(name) {
+      for (var i = 0; i < this.listeners[name].length; i++)
+        this.listeners[name][i]();
+    },
+
+    isValid: function() { return this.p && this.mv; },
     
     getRenderable: function()
     {
       if (this.renderable) return this.renderable;
       
       var renderable = this.renderable = new Renderable();
+      renderable.upToDate = false;
       var frustum = this;
       
       function addVertices(e, vertices)
@@ -167,15 +177,19 @@ var Frustum = (function() {
       
       renderable.init = function(vertices, colors) {
         this.DRAW_MODE = GL_LINES;
-        var e = extents(frustum);//{ntl:ntl, ntr:ntr, nbl:nbl, nbr:nbr, ftl:ftl, ftr:ftr, fbl:fbl, fbr:fbr};
-        
-        addVertices(e, vertices);
         
         for (var i = 0; i < 24; i++)
+        {
+          vertices.push(0,0,0);
           colors.push(1,1,0,1);
+        }
       };
       
-      renderable.update = function(timechange) {
+      renderable.update = null;
+      /*
+      function(timechange) {
+        if (!frustum.isValid()) { return; }
+        
         var buf = renderable.mesh.getVertexBuffer();
         if (!buf) return;
         var vertices = buf.js;
@@ -186,6 +200,22 @@ var Frustum = (function() {
         
         buf.refresh();
       };
+      */
+      
+      frustum.addUpdateListener(function() {
+        if (!frustum.isValid()) { return; }
+        
+        renderable.upToDate = true;
+        var buf = renderable.mesh.getVertexBuffer();
+        if (!buf) return;
+        var vertices = buf.js;
+        vertices.clear();
+        var e = extents(frustum);//{ntl:ntl, ntr:ntr, nbl:nbl, nbr:nbr, ftl:ftl, ftr:ftr, fbl:fbl, fbr:fbr};
+        
+        addVertices(e, vertices);
+        
+        buf.refresh();
+      });
       
       return renderable;
     }

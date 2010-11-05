@@ -37,9 +37,7 @@ var Renderable = function() {
         
         // this is necessary to prevent losing "this" with a straight function assignment
         function resetMatrixDependentData() { self.resetMatrixDependentData(); }
-        
-        self.orientation.addListener('orientation', resetMatrixDependentData);
-        self.orientation.addListener('position',    resetMatrixDependentData);
+        self.orientation.addListener('matrices', resetMatrixDependentData);
       
         var ori = attributes.orientation;
         if (ori && (ori.view || ori.up || ori.position || ori.right))
@@ -126,6 +124,7 @@ var Renderable = function() {
         if (options.createShader) options = {context:options};
         if (!options.context) throw new Error("no context given!");
         if (self.update && !self.updateInterval) self.rebuild(options.context);
+        // if user removes the update method, we should accept it as a hint to stop updating, and remove the interval.
         else if (!self.update && self.updateInterval) { clearInterval(self.updateInterval); self.updateInterval = null; }
         
         options.mode = options.mode || FILL;
@@ -181,18 +180,21 @@ var Renderable = function() {
         if (!context) throw new Error("Can't rebuild without a context!");
         
         self.dispose(context);
-        var previousUpdate = new Date();
-        self.updateInterval = setInterval(function() {
-          if (self.update)
-          {
-            logger.attempt("update", function() {
-              var currentTime = new Date();
-              var timechange = currentTime - previousUpdate;
-              previousUpdate = currentTime;
-              self.update(timechange / 1000);
-            });
-          }
-        }, Renderable.update_interval);
+        if (self.update)
+        {
+          var previousUpdate = new Date();
+          self.updateInterval = setInterval(function() {
+            if (self.update)
+            {
+              logger.attempt("update", function() {
+                var currentTime = new Date();
+                var timechange = currentTime - previousUpdate;
+                previousUpdate = currentTime;
+                self.update(timechange / 1000);
+              });
+            }
+          }, Renderable.update_interval);
+        }
       });
     },
     

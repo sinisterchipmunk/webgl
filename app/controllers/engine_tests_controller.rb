@@ -105,7 +105,7 @@ class EngineTestsController < ApplicationController
   end
   
   def frustum
-    dependencies << "objects/quad" << "engine/frustum" << "objects/cube" << "objects/sphere" << "objects/point"
+    dependencies << "objects/quad" << "objects/cube" << "objects/sphere" << "objects/point"
   end
   
   def creatures
