@@ -6,6 +6,14 @@ function checkNaN(vec)
     if (isNaN(vec[i])) { throw new Error("Index "+i+"<"+vec[i]+"> is NaN in <"+vec+"> (from "+new Error().stack+")!"); }
 }
 
+Array.prototype.dup = function()
+{
+  var copy = [];
+  for (var i = 0; i < this.length; i++)
+    copy[i] = this[i];
+  return copy;
+};
+
 Array.prototype._vectorize = function(other, y, z, w) {
   var result = [], i;
   if (typeof(other) == 'number') {

@@ -15,7 +15,7 @@ var Quad = Class.create(Renderable, {
   },
   
   init: function(vertices, colors, textureCoords) {
-    this.DRAW_MODE = GL_TRIANGLE_STRIP;
+    this.draw_mode = GL_TRIANGLE_STRIP;
     var width = this.width, height = this.height;
 
     vertices.push(-width/2, -height/2, 0);

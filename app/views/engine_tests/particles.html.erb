@@ -1,34 +1,83 @@
 <script>
   <%content_for :global do%>
-    var particles;
+    function addSystem() {
+      var name = $("which-system").value;
+      particle_systems.create(name);
+    }
+  
+    function launchStressTest(particle_count) {
+      world.particle_systems.add(new ParticleSystem({
+        particle_count:particle_count,
+        shape: ParticleSystem.Shape.POINT,
+      
+        revive_particle: function(particle) {
+          var min_spin = 1, max_spin = 2;
+          var topr = 7.5;
+          var botr = 1;
+          var y = Math.random() * 10;
+          
+          particle.rad = Math.random() * ((y / 10.0) * (topr - botr) + botr);
+          particle.spin = Math.random() * (max_spin-min_spin) + min_spin;
+          particle.angle = Math.random() * Math.PI * 2;
+          var x = particle.rad * Math.cos(particle.angle);
+          var z = particle.rad * Math.sin(particle.angle);
+          
+          particle.position[0] = x;
+          particle.position[1] = y - 5;
+          particle.position[2] = z;
+          particle.energy = Math.random()*2;
+          particle.color[0] = Math.random()*0.5+0.5;
+          particle.color[1] = Math.random()*0.5+0.5;
+          particle.color[2] = Math.random()*0.5+0.5;
+          particle.color[3] = 1;
+          particle.color[parseInt(Math.random()*3)] = 0; // zero one out.
+        },
+      
+        update_particle: function(particle, timechange) {
+          particle.angle += particle.spin*timechange;
+          var x = particle.rad * Math.cos(-particle.angle);
+          var z = particle.rad * Math.sin(-particle.angle);
+          
+          particle.position[0] = x;
+          particle.position[2] = z;
+          
+          particle.energy -= timechange;
+        }
+      }));
+    }
   <%end%>
   
   <%content_for :init do%>
-    particles = new ParticleGenerator();
-    world.addObject(particles);
-    world.camera.translateTo(0,0,14);
-  <%end%>
-  
-  <%content_for :render do%>
-    if (mouse && mouse.x && mouse.y)
+    for (var name in particle_systems)
     {
-      var x = mouse.x / $('canvas').width;
-      var y = mouse.y / $('canvas').height;
-      x -= 0.5;
-      y -= 0.5;
-      x *= 10;
-      y *= 10;
-      
-      particles.options.destination[0] = x;
-      particles.options.destination[1] = -y;
+      if (typeof(particle_systems[name]) != "function")
+      {
+        var node = document.createElement("option");
+        $(node).update(name);
+        node.setAttribute("value", name);
+        $("which-system").appendChild(node);
+      }
     }
-    world.render();
+
+    world.camera.translateTo(0,0,25);
+  
   <%end%>
 </script>
-<p>This test demonstrates a really, really primitive particle generator. It needs a lot more work before it can
-be considered usable in any sense, and I just haven't gotten around to putting the necessary effort into it. But,
-it shows that it isn't too hard to pull off, and that it's certainly viable to have lots of moving objects in a
-scene at once.</p>
-<p>There is currently a framerate issue. I think this is because my particle code creates a lot of dynamic temporary
-objects, so it's the garbage collection of these objects that is slowing it down. With some optimization, I believe
-the framerate can be kept quite acceptable.</p>
+<!--<p>This test demonstrates a really, really primitive particle generator. It needs a lot more work before it can-->
+<!--be considered usable in any sense, and I just haven't gotten around to putting the necessary effort into it. But,-->
+<!--it shows that it isn't too hard to pull off, and that it's certainly viable to have lots of moving objects in a-->
+<!--scene at once.</p>-->
+<!--<p>There is currently a framerate issue. I think this is because my particle code creates a lot of dynamic temporary-->
+<!--objects, so it's the garbage collection of these objects that is slowing it down. With some optimization, I believe-->
+<!--the framerate can be kept quite acceptable.</p>-->
+<p>
+  <select id="which-system"></select>
+  <input type='button' onclick='addSystem();' value="Add System" />
+  <input type="button" onclick="particle_systems.clear();" value="Clear Systems" />
+</p>
+<p><strong>Stress Test</strong></p>
+<p>
+  POINT Particle count:
+  <input type='text' id='point-count' value='12000' />
+  <input type='button' onclick='launchStressTest(parseInt($("point-count").value));' value="Launch" />
+</p>

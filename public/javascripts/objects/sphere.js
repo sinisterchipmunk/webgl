@@ -9,10 +9,11 @@ var Sphere = Class.create(Renderable, {
      In general, fewer stacks and slices means better improvement but lower image quality.
    */
   initialize: function($super, options) {
+    var default_options = { stacks:30, slices:30 };
     if (typeof(options) == "number") options = { radius: options, stacks: 30, slices: 30 };
     this.radius = options.radius;
-    this.stacks = options.stacks;
-    this.slices = options.slices;
+    this.stacks = options.stacks || default_options.stacks;
+    this.slices = options.slices || default_options.slices;
     $super();
     
     

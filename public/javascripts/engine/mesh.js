@@ -184,9 +184,13 @@ var Mesh = function() {
       // set the shader attributes
       shader.setAttribute('aVertexPosition', vertexBuffer);
       if (indexBuffer)   indexBuffer.bind(context);
+
       if (normalBuffer)  shader.setAttribute('aVertexNormal', normalBuffer);
+      else               shader.disableAttribute('aVertexNormal');
+      
       if (colorBuffer)   shader.setAttribute('aVertexColor', colorBuffer);
-        
+      else               shader.disableAttribute('aVertexColor');
+      
       for (var i = 0; i < self.textures.length; i++) {
         var descriptor = self.textures[i];
         if (descriptor)
@@ -204,7 +208,7 @@ var Mesh = function() {
         
       // bind the shader, apply the attributes, and draw the object.
       shader.bind(function() {
-        var dmode = options.draw_mode || self.DRAW_MODE;
+        var dmode = options.draw_mode || self.draw_mode;
         if (mode == WIREFRAME) dmode = GL_LINE_STRIP;
             
         if (indexBuffer)
@@ -259,7 +263,7 @@ var Mesh = function() {
         if (!context) throw new Error("Can't rebuild without a context!");
         self.dispose(context);
         var gl = context.gl;
-        self.DRAW_MODE = self.DRAW_MODE || GL_TRIANGLES;
+        self.draw_mode = typeof(self.draw_mode) == "undefined" ? GL_TRIANGLES : self.draw_mode;
         self.built[context.id] = context;
   
         var vertices = [], colors = [], textureCoords = [], normals = [], indices = [];

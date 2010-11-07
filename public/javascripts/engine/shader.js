@@ -83,6 +83,11 @@ function Shader(options)
     attr.buffer = buffer;
   };
   
+  /* equivalent to calling #setAttribute(name, null) */
+  self.disableAttribute = function(name) {
+    self.attribute(name).buffer = null;
+  };
+  
   self.getAttribute = function(name) {
     var result = self.attribute(name).buffer;
     if (typeof(result) == "function") result = result();

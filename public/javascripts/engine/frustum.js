@@ -176,7 +176,7 @@ var Frustum = (function() {
       }
       
       renderable.init = function(vertices, colors) {
-        this.DRAW_MODE = GL_LINES;
+        this.draw_mode = GL_LINES;
         
         for (var i = 0; i < 24; i++)
         {

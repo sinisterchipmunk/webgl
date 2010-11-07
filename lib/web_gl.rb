@@ -4,6 +4,7 @@ module WebGL
   module_function
   
   autoload :Shader, 'web_gl/shader'
+  autoload :ParticleSystem, 'web_gl/particle_system'
   autoload :Renderable, 'web_gl/renderable'
   autoload :World, 'web_gl/world'
   

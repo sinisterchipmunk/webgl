@@ -15,7 +15,7 @@ var Line = Class.create(Renderable, {
   },
   
   init: function(vertices, colors, textureCoords) {
-    this.DRAW_MODE = GL_LINES;
+    this.draw_mode = GL_LINES;
     var a = this.a, b = this.b;
     if (a.elements) a = a.elements;
     if (b.elements) b = b.elements;

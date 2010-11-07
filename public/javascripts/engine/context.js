@@ -96,7 +96,7 @@ var WebGLContext = function() {
       if (self.isRendering()) self.stopRendering();
       self.render = render_func || self.render || function() { self.world.render(); };
       
-      self.renderInterval = setInterval(function() {
+      function render() {
         logger.attempt(self.canvas.id+":render", function() {
           if (self.renderBlocking) return;
           try {
@@ -117,7 +117,10 @@ var WebGLContext = function() {
             throw e;
           }
         });
-      }, WebGLContext.render_interval);
+        self.renderInterval = setTimeout(render, WebGLContext.render_interval)
+      }
+      
+      self.renderInterval = setTimeout(render, WebGLContext.render_interval);
     },
     stopRendering: function() {
       if (this.isRendering()) clearInterval(this.renderInterval);

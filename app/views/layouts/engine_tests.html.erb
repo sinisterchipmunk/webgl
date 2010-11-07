@@ -16,13 +16,15 @@
   <script type="text/javascript" src="/javascripts/engine/plane.js"></script>
   <script type="text/javascript" src="/javascripts/engine/frustum.js"></script>
   <script type="text/javascript" src="/javascripts/engine/camera.js"></script>
+  <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
+  <script type="text/javascript" src="/javascripts/systems/particle_system.js"></script>
+  <script type="text/javascript" src="/javascripts/systems/particle_manager.js"></script>
   <script type="text/javascript" src="/javascripts/engine/shader.js"></script>
   <script type="text/javascript" src="/javascripts/engine/world.js"></script>
   <script type="text/javascript" src="/javascripts/engine/context.js"></script>
   <script type="text/javascript" src="/javascripts/engine/buffer.js"></script>
   <script type="text/javascript" src="/javascripts/engine/texture.js"></script>
   <script type="text/javascript" src="/javascripts/engine/mesh.js"></script>
-  <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
   <%dependencies.each do |fi| %>
     <%=javascript_include_tag fi%>
   <%end%>
@@ -36,6 +38,24 @@
     var gl = null;
     var frame_count = 0;
     var world;
+    var particle_systems = <%=particle_systems.to_json%>;
+    
+    particle_systems.create = function(name, _world) {
+      if (!_world) _world = world;
+      if (particle_systems[name])
+      {
+        var ps = new ParticleSystem(particle_systems[name]);
+        _world.particle_systems.add(ps);
+        return ps;
+      }
+      else
+        throw new Error("Particle system not found: "+name);
+    };
+    
+    particle_systems.clear = function(_world) {
+      if (!_world) _world = world;
+      _world.particle_systems.clear();
+    };
     
     <%=yield :global%>
     

@@ -113,7 +113,7 @@ var Skeleton = function() {
                     });
      */
     initialize: function($super, options) {
-      this.DRAW_MODE = GL_LINES;
+      this.draw_mode = GL_LINES;
       this.keyframes = [];
       this.playing = false;
       this.loop = true;

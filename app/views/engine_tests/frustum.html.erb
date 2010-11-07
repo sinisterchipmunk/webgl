@@ -126,7 +126,7 @@
   
     var count = 0;
     contexts[0].world.each_object(function(obj) {
-      var render = false;
+      var render = !$("culling-enabled").checked;
       switch($MODE) {
         case 0: // points
           if (contexts[0].world.camera.frustum.pointVisible(obj.orientation.getPosition())) render = true;
@@ -178,6 +178,7 @@ sphere is off-screen, the test will fail and the entire sphere will be omitted. 
   (<input type="radio" name="mode" onclick='setTestMode(1, this);' /> Cubes)
   (<input type="radio" name="mode" onclick='setTestMode(2, this);' /> Spheres)
 </p>
+<p><input type="checkbox" id="culling-enabled" checked /> Culling On</p>
 
 <p>
 Be aware that this demo runs very slowly by design. It's not because frustum culling is particularly slow (although it

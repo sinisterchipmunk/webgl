@@ -1,0 +1,74 @@
+(function() { return {
+  name: "<%=file_name%>",
+  
+  /*
+    how many particles are ideally in this system? Note that the particle manager may
+    tweak the actual particle count based on the system's performance. Consider this
+    an upper limit, and not an absolute given.
+   */
+  particle_count: 250,
+  
+  /*
+    Particle shape can be ParticleSystem.Shape.SQUARE, ParticleSystem.Shape.RECTANGLE,
+    or a custom shape in the form of an array of 4 vertices:
+    
+      [v1x,v1y,v1z,  v2x,v2y,v2z,  v3x,v3y,v3z,  v4x,v4y,v4z]
+      
+    If there are more than 16 elements in the array, the additional elements will be
+    ignored.
+   */
+  shape: ParticleSystem.Shape.SQUARE,
+  
+  /*
+    List of textures to add to this particle system. Every particle in the system will
+    have the entire texture list applied to it.
+   */
+  textures: [ "/images/textures/particle.png" ],
+  
+  revive_particle: function(particle) {
+    /*
+      Construct or reconstruct the particle. This is triggered when particle.energy <= 0,
+      provided particle.alive == true.
+      
+      Particles consist of the following attributes:
+        {
+          index   : i,
+          size    : [0.1,0.1,0.1],
+          position: [0,0,0],
+          velocity: [0,0,0],
+          color   : [1,1,1,1],
+          alive   : true,
+          energy  : 1
+        }
+       
+      Values are also given for previous_position, previous_color, previous_velocity and
+      previous_energy, if applicable.
+      
+      Particle systems can easily slow the machine to a crawl. Try not to create any new
+      objects such as arrays, vectors, et cetera. Set array indices directly and avoid
+      syntax like:
+  
+        particle.color = [1,1,1,1]; (this implicitly creates a new array for each particle.)
+     
+      Remember, every object you create is an object that has to be garbage collected.
+    */ 
+  },
+
+  update_particle: function(particle, timechange) {
+    /*
+      Update the particle's properties. The timechange argument is the number of seconds passed
+      since the last update. Multiply X by this value to effect a change over X seconds.
+      
+      Be aware: when particle.energy is less than or equal to zero, the particle will be revived
+      UNLESS particle.alive is false. If the particle is not alive, it will be permanently
+      removed from the system. If the system has no more particles, the entire system dies.
+     */
+    
+    particle.energy -= timechange;
+    
+    // move the particle by its velocity over time
+    particle.position[0] += particle.velocity[0] * timechange;
+    particle.position[1] += particle.velocity[1] * timechange;
+    particle.position[2] += particle.velocity[2] * timechange;
+  }
+}; })();

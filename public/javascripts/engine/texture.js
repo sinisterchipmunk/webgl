@@ -90,6 +90,6 @@ Texture.find_or_create = function(path) {
 };
 
 Texture.instance = function(attributes) {
-  return Texture.find_or_create(attributes.path);
+  return Texture.find_or_create(attributes.path ? attributes.path : attributes);
   // TODO or we can switch to keying off of attributes.id, which would be more future-proof, but less flexible
 };

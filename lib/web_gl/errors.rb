@@ -3,7 +3,11 @@ module WebGL
     
   end
   
-  class MissingShaderFile < WebGL::Error
+  class MissingFile < WebGL::Error
+    
+  end
+  
+  class MissingShaderFile < WebGL::MissingFile
     
   end
 end

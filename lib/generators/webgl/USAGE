@@ -1,0 +1,8 @@
+Description:
+    Generates a WebGL particle system.
+
+Example:
+    rails generate particle_system Thing
+
+    This will create:
+        app/webgl/particle_systems/thing.js

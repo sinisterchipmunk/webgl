@@ -5,6 +5,7 @@ function World(context)
   self.camera = new Camera();
   self.context = context;
   self.frame_count = 0;
+  self.particle_systems = new ParticleManager();
   
   /* buffers for picking */
   after_initialize(function() {
@@ -46,8 +47,12 @@ World.prototype = {
       }
       
       this.camera.look(this.context.gl);
-      if (this.scene && mode != RENDER_PICK)
-        this.scene.render({context:this.context, mode:mode});
+      if (mode != RENDER_PICK)
+      {
+        if (this.scene)
+          this.scene.render({context:this.context, mode:mode});
+        this.particle_systems.render({context:this.context, mode:mode});
+      }
       this.renderObjects(mode);
     mvPopMatrix();
   },

@@ -28,7 +28,10 @@ var Renderable = function() {
         self.object_id = ++Renderable.identifier;
         Renderable.all.push(self);
       
-        self.mesh = new Mesh(function() { self.init && self.init.apply(self, arguments); });
+        self.mesh = new Mesh(function() {
+          self.init && self.init.apply(self, arguments);
+          self.mesh.draw_mode = typeof(self.draw_mode) == "undefined" ? GL_TRIANGLES : self.draw_mode;
+        });
         self.orientation = new Camera();
         self.pickShader = false;
         self.textures = [];
@@ -117,6 +120,12 @@ var Renderable = function() {
     },
     
     render: function(options) {
+      /* replace options with a copy, so that internal modifications to the options object don't taint the original */
+      var options_copy = {};
+      for (var i in options)
+        options_copy[i] = options[i];
+      options = options_copy;
+      
       var self = this;
       if (options.id) options = {context:options}; // backward compatibility
 
@@ -125,7 +134,7 @@ var Renderable = function() {
         if (!options.context) throw new Error("no context given!");
         if (self.update && !self.updateInterval) self.rebuild(options.context);
         // if user removes the update method, we should accept it as a hint to stop updating, and remove the interval.
-        else if (!self.update && self.updateInterval) { clearInterval(self.updateInterval); self.updateInterval = null; }
+        else if (!self.update && self.updateInterval) { clearTimeout(self.updateInterval); self.updateInterval = null; }
         
         options.mode = options.mode || FILL;
         mvPushMatrix();
@@ -147,7 +156,6 @@ var Renderable = function() {
        use this to override what happens when rendering while preserving things like orientation.
      */
     draw: function(options) {
-      options.draw_mode = options.draw_mode || this.DRAW_MODE;
       if (this.mesh) { 
         this.mesh.render(options);
       }
@@ -164,7 +172,7 @@ var Renderable = function() {
     
     // forces this object to be rebuilt for every context.
     invalidate: function() {
-      if (this.updateInterval) clearInterval(this.updateInterval);
+      if (this.updateInterval) clearTimeout(this.updateInterval);
       this.updateInterval = null;
       if (this.mesh) this.mesh.invalidate();
     },
@@ -183,7 +191,7 @@ var Renderable = function() {
         if (self.update)
         {
           var previousUpdate = new Date();
-          self.updateInterval = setInterval(function() {
+          function update() {
             if (self.update)
             {
               logger.attempt("update", function() {
@@ -193,7 +201,10 @@ var Renderable = function() {
                 self.update(timechange / 1000);
               });
             }
-          }, Renderable.update_interval);
+            self.updateInterval = setTimeout(update, Renderable.update_interval);
+          }
+      
+          self.updateInterval = setTimeout(update, Renderable.update_interval);
         }
       });
     },

@@ -38,7 +38,7 @@ var Axis = Class.create(Renderable, {
   },
   
   init: function(vertices, colors, textureCoords) {
-    this.DRAW_MODE = GL_LINES;
+    this.draw_mode = GL_LINES;
     // x
     vertices.push(0,0, 0); colors.push(1,0,0,1);
     vertices.push(1,0, 0); colors.push(1,0,0,1);
