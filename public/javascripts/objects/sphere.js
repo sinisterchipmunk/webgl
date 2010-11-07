@@ -15,6 +15,7 @@ var Sphere = Class.create(Renderable, {
     this.stacks = options.stacks || default_options.stacks;
     this.slices = options.slices || default_options.slices;
     $super();
+    if (options.position) this.orientation.setPosition(options.position);
     
     
     /* what's wrong with this?

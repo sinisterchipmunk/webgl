@@ -120,15 +120,15 @@ var Renderable = function() {
     },
     
     render: function(options) {
+      var self = this;
+      if (options.id) options = {context:options}; // backward compatibility
+
       /* replace options with a copy, so that internal modifications to the options object don't taint the original */
       var options_copy = {};
       for (var i in options)
         options_copy[i] = options[i];
       options = options_copy;
       
-      var self = this;
-      if (options.id) options = {context:options}; // backward compatibility
-
       logger.attempt("Renderable#render", function() {
         if (options.createShader) options = {context:options};
         if (!options.context) throw new Error("no context given!");

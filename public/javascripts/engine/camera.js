@@ -36,6 +36,7 @@ function Camera(options)
     if (typeof(vec) == "number") vec = [vec, y, z];
     if (self.callbacks && self.callbacks.position_changed) self.callbacks.position_changed(position, vec);
     position = vec;
+    self.look();
     return self;
   };
 
@@ -314,7 +315,7 @@ Camera.prototype.moveTo = function(vec, y, z)
 {
   if (typeof(vec) == "number") vec = [vec, y, z];
   this.setPosition(vec);
-  this.getMatrix().setTranslateTo(vec);
+  this.getMatrix().setTranslateTo(vec, this.callbacks.matrices_changed);
   return this;
 };
 
@@ -338,7 +339,7 @@ Camera.prototype.translate = function(vec, y, z)
   var translation = position.plus(right.times(vec[0]).plus(up.times(vec[1]).plus(view.times(vec[2]))));
   
   this.setPosition(translation);
-  this.getMatrix().setTranslateTo(translation);
+  this.getMatrix().setTranslateTo(translation, this.callbacks.matrices_changed);
   return this;
 };
 

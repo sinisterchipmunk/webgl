@@ -86,13 +86,16 @@ var Animation = (function() {
           }
           
           var v = self.mesh.getVertexBuffer(), n = self.mesh.getNormalBuffer();
-          for (i = 0; i < v.js.length; i++)
+          if (v && n)
           {
-            v.js[i] = (current.vertices[i] + (this.interpolation.vertices[i] * pcnt)) * self.scale;
-            n.js[i] = (current.normals[i]  + (this.interpolation.normals[i]  * pcnt)); // don't scale normals :)
+            for (i = 0; i < v.js.length; i++)
+            {
+              v.js[i] = (current.vertices[i] + (this.interpolation.vertices[i] * pcnt)) * self.scale;
+              n.js[i] = (current.normals[i]  + (this.interpolation.normals[i]  * pcnt)); // don't scale normals :)
+            }
+            v.refresh();
+            n.refresh();
           }
-          v.refresh();
-          n.refresh();
         }
       }
     }

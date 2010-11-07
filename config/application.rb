@@ -48,3 +48,25 @@ module RailsGame
 end
 
 autoload :WebGL, "web_gl"
+
+ActionView::Helpers::AssetTagHelper.register_javascript_expansion :webgl => %w(
+  sylvester
+  sylvester-ext
+  gl-utils
+  webgl
+  engine/core 
+  engine/assertions 
+  engine/vector 
+  engine/plane 
+  engine/frustum
+  engine/camera 
+  objects/renderable 
+  systems/particle_system 
+  systems/particle_manager 
+  engine/shader 
+  engine/world
+  engine/context 
+  engine/buffer 
+  engine/texture 
+  engine/mesh
+)

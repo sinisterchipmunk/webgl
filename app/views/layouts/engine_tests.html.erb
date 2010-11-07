@@ -6,25 +6,7 @@
   <%= javascript_include_tag :defaults %>
   <%= csrf_meta_tag %>
   <%=yield :head%>
-  <script type="text/javascript" src="/javascripts/sylvester.js"></script>
-  <script type="text/javascript" src="/javascripts/sylvester-ext.js"></script>
-  <script type="text/javascript" src="/javascripts/gl-utils.js"></script>
-  <script type="text/javascript" src="/javascripts/webgl.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/core.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/assertions.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/vector.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/plane.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/frustum.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/camera.js"></script>
-  <script type="text/javascript" src="/javascripts/objects/renderable.js"></script>
-  <script type="text/javascript" src="/javascripts/systems/particle_system.js"></script>
-  <script type="text/javascript" src="/javascripts/systems/particle_manager.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/shader.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/world.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/context.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/buffer.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/texture.js"></script>
-  <script type="text/javascript" src="/javascripts/engine/mesh.js"></script>
+  <%= javascript_include_tag :webgl %>
   <%dependencies.each do |fi| %>
     <%=javascript_include_tag fi%>
   <%end%>

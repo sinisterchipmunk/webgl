@@ -38,12 +38,21 @@ Matrix.prototype.setLookAt = function(position, view, up, side, callback) {
   if (changed) callback();
 };
 
-Matrix.prototype.setTranslateTo = function(position) {
-  for (var i = 0; i < 3; i++)
-    this.elements[i][3] = -position[0] * this.elements[i][0] +
-                          -position[1] * this.elements[i][1] +
-                          -position[2] * this.elements[i][2];
+Matrix.prototype.setTranslateTo = function(position, callback) {
+  /* TODO dry this up */
+  var changed = false;
+  var e = this.elements;
   
+  function check_set(row, col, newval) {
+    if (e[row][col] != newval) { changed = true; e[row][col] = newval; }
+  }
+
+  for (var i = 0; i < 3; i++)
+    check_set(i, 3, -position[0] * this.elements[i][0] +
+                    -position[1] * this.elements[i][1] +
+                    -position[2] * this.elements[i][2]);
+  
+  if (changed && callback) callback();
   return this;
 };
 
