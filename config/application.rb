@@ -69,4 +69,5 @@ ActionView::Helpers::AssetTagHelper.register_javascript_expansion :webgl => %w(
   engine/buffer 
   engine/texture 
   engine/mesh
+  culling/octree
 )

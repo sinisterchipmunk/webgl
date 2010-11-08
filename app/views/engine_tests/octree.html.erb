@@ -59,12 +59,6 @@
 <p>This test demonstrates octree culling, which constructs bounding volumes around groups of objects so that they can be
 collectively tested against the frustum. The result is a much faster test at the expense of accuracy.</p>
 
-<p>Octrees are subdivided into smaller octrees, until some threshold has been reached. (For this demo, the threshold is
-a maximum of 8 sub-levels to stop subdividing, and a minimum of 8 objects to start subdividing.) If an entire node is
-visible, no further testing is done; if it is partially visible, then its subnodes are tested; if it is not visible,
-then it and all its subnodes are omitted. Render the node boundaries to see this test in action. As an entire node is
-made visible, its subnodes will not be tested and, therefore, their boundaries will not be drawn.</p>
-
 <p>Note that there is a performance hit even for rendering the node boundaries, so when lots of nodes are being tested,
 try disabling node boundaries and note the difference.</p>
 

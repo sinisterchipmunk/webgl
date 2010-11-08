@@ -17,8 +17,8 @@
       logger.attempt("image onload", function() {
         height_map.image = $('heightmap');
         height_map.scale = 0.75;
-        height_map.orientation.move(15);
-        height_map.orientation.strafe(-10);
+        world.camera.move(-15);
+        world.camera.strafe(10);
         // forces a rebuild of the height map on the next render
         height_map.invalidate();
       });
@@ -27,6 +27,7 @@
   <%end%>
         
   <%content_for :render do %>
+    height_map.render_octree = $("show-octree").checked;
     world.render(WIREFRAME);
   <%end%>
 </script>
@@ -35,6 +36,9 @@
 Height Map:<br/>
 <img id="heightmap" src="/images/rails.png" alt="" /><br/>
 <br/>
+<p>
+  <input type="checkbox" id="show-octree" /> Show Octree
+</p>
 <p>
   This height map was built dynamically using the image above. Click on the height map canvas to switch to a new image.
 </p>

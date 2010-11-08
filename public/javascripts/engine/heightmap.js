@@ -118,12 +118,19 @@ var HeightMap = function() {
     
     setMagnitude: function(mag) {  },
     
+    draw: function($super, options) {
+      $super(options);
+      if (this.render_octree)
+        this.octree.render({render_octree:true,render_objects:false,context:options.context});
+    },
+    
     init: function(vertices, colors, textureCoords, normals, indices) {
       var y, self = this;
       if (self.image) buildData(self); // TODO don't do this if image / options haven't changed
       
       self.draw_mode = GL_TRIANGLE_STRIP;
-        
+      
+      var octree = new Octree();
       each_vertex(self, function(x, z) {
         y = self.height(x, z);
         if (isNaN(y)) alert(x+" "+z+" / "+self.width()+" "+self.depth());
@@ -134,8 +141,11 @@ var HeightMap = function() {
         colors.push(y, y, y, 1);
         
         textureCoords.push(x/self.width(), z/self.depth());
+        
+        octree.addObject({vertices:[0,0,0],position:[x*self.scale, y, z*self.scale]});
       });
       
+      self.octree = octree;
       self.triangles = vertices;  
 
       assert_equal(vertices.length / 3, colors.length / 4);

@@ -45,18 +45,20 @@ var Frustum = (function() {
     h = h / 2.0;
     d = d / 2.0;
     
+    var xp = position[0]+w, xm=position[0]-w, yp=position[1]+h, ym=position[1]-h, zp=position[2]+d, zm=position[2]-d;
+    
     for (p in self.planes)
     {
       plane = self.planes[p];
       c = 0;
-      if (plane.distance(position[0]+w, position[1]+h, position[2]+d) > 0) c++;
-      if (plane.distance(position[0]-w, position[1]+h, position[2]+d) > 0) c++;
-      if (plane.distance(position[0]+w, position[1]-h, position[2]+d) > 0) c++;
-      if (plane.distance(position[0]-w, position[1]-h, position[2]+d) > 0) c++;
-      if (plane.distance(position[0]+w, position[1]+h, position[2]-d) > 0) c++;
-      if (plane.distance(position[0]-w, position[1]+h, position[2]-d) > 0) c++;
-      if (plane.distance(position[0]+w, position[1]-h, position[2]-d) > 0) c++;
-      if (plane.distance(position[0]-w, position[1]-h, position[2]-d) > 0) c++;
+      if (plane.distance(xp, yp, zp) > 0) c++;
+      if (plane.distance(xm, yp, zp) > 0) c++;
+      if (plane.distance(xp, ym, zp) > 0) c++;
+      if (plane.distance(xm, ym, zp) > 0) c++;
+      if (plane.distance(xp, yp, zm) > 0) c++;
+      if (plane.distance(xm, yp, zm) > 0) c++;
+      if (plane.distance(xp, ym, zm) > 0) c++;
+      if (plane.distance(xm, ym, zm) > 0) c++;
       if (c == 0) return OUTSIDE;
       if (c == 8) c2++;
     }

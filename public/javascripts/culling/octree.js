@@ -2,6 +2,8 @@ var Octree = (function() {
   var FRONT_TOP_LEFT = 1, FRONT_TOP_RIGHT = 2, FRONT_BOTTOM_LEFT = 3, FRONT_BOTTOM_RIGHT = 4,
       BACK_TOP_LEFT  = 5, BACK_TOP_RIGHT  = 6, BACK_BOTTOM_LEFT  = 7, BACK_BOTTOM_RIGHT  = 8;
   
+  function objPosition(obj) { return obj.orientation ? obj.orientation.getPosition() : obj.position; }
+  
   function delegateObjectToNode(self, obj)
   {
     // first figure out which quadrant the object is in. We'll use just its position for this.
@@ -12,7 +14,7 @@ var Octree = (function() {
     //           o =>|
     //             |<= o
     
-    var quadrant = self.quadrantForPoint(obj.orientation.getPosition());
+    var quadrant = self.quadrantForPoint(objPosition(obj));
     
     
     // then add the object to the node in that quadrant.
@@ -21,7 +23,7 @@ var Octree = (function() {
   
   function objectSize(obj)
   {
-    var vertices = obj.mesh.getVertexBuffer().js;
+    var vertices = obj.mesh ? obj.mesh.getVertexBuffer().js : obj.vertices;
     if (vertices.length == 0) { logger.info("no size!"); return [0,0,0]; }
     var right = null, left = null, top = null, bottom = null, front = null, back = null;
     for (var i = 0; i < vertices.length; i += 3)
@@ -47,7 +49,7 @@ var Octree = (function() {
     {
       for (i = 0; i < node.objects.length; i++)
       {
-        pos = node.objects[i].orientation.getPosition();
+        pos = objPosition(node.objects[i]);
         var size = objectSize(node.objects[i]);
         r = pos[0] + size[0];
         l = pos[0] - size[0];
@@ -62,12 +64,6 @@ var Octree = (function() {
           right = Math.max(right, r); left = Math.min(left, l); top = Math.max(top, t);
           bottom= Math.min(bottom,b); front= Math.max(front,f); back= Math.min(back,z);
         }
-//        if (pos[0]+size[0] > right) right = pos[0] + size[0];
-//        if (pos[0]-size[0] < left ) left  = pos[0] - size[0];
-//        if (pos[1]+size[1] > top  ) top   = pos[1] + size[1];
-//        if (pos[1]-size[1] < bottom)bottom= pos[1] - size[1];
-//        if (pos[2]+size[2] > front) front = pos[2] + size[2];
-//        if (pos[2]-size[2] < back ) back  = pos[2] - size[2];
       }
     }
 //    else if (node.nodes)
@@ -76,9 +72,12 @@ var Octree = (function() {
 //      {
 //        var n = node.nodes[i];
 //        pos = n.position;
-//        var r = pos[0]-p[0]+n.width /2.0, l = pos[0]-p[0]-n.width /2.0;
-//        var t = pos[1]-p[1]+n.height/2.0, b = pos[1]-p[1]-n.height/2.0;
-//        var f = pos[2]-p[2]+n.depth /2.0, z = pos[2]-p[2]-n.depth /2.0;
+//        r = pos[0]+n.width /2.0;
+//        l = pos[0]-n.width /2.0;
+//        t = pos[1]+n.height/2.0;
+//        b = pos[1]-n.height/2.0;
+//        f = pos[2]+n.depth /2.0;
+//        z = pos[2]-n.depth /2.0;
 //        if (r > right) right = r;
 //        if (l < left)  left  = l;
 //        if (t > top)   top   = t;
@@ -116,10 +115,6 @@ var Octree = (function() {
     self.nodes[BACK_TOP_RIGHT]   = new Octree({max_objects:objs,max_levels:lvls,level:self.level+1,color:[1,0,1,1]});
     self.nodes[BACK_BOTTOM_LEFT] = new Octree({max_objects:objs,max_levels:lvls,level:self.level+1,color:[1,0.5,0.5,1]});
     self.nodes[BACK_BOTTOM_RIGHT]= new Octree({max_objects:objs,max_levels:lvls,level:self.level+1,color:[0.5,1,0.5,1]});
-
-    for (var i = self.objects.length-1; i >= 0; i--)
-      delegateObjectToNode(self, self.objects[i]);//.pop());
-//    self.objects = null;
   }
   
   var klass = Class.create({
@@ -187,24 +182,33 @@ var Octree = (function() {
     },
     
     /*
-      At a minimum, options must contain 'context' and 'frustum'. It may also contain any of the following:
+      At a minimum, options must contain 'context'. It may also contain any of the following:
         shader: a Shader object, default null. A shader to be used for all objects in place of their normal shaders.
         render_octree:   boolean, default false. If true, the edges of the octree will be rendered.
+        render_objects:  boolean, default true. If false, the objects within this node will not be rendered.
+        frustum: the instance of Frustum to check nodes against. If omitted, defaults to context.world.camera.frustum.
      */
     render: function(options) {
       if (!this.normalized) this.normalize();
       if (!options.context) throw new Error("A context is required!");
-      if (!options.frustum) throw new Error("A frustum is required!");
+      
+      var frustum = options.frustum || options.context.world.camera.frustum;
+      if (!frustum) throw new Error("A frustum is required!");
+      
+      if (typeof(options.render_objects) == "undefined") options.render_objects = true;
       
       var visibility;
       if (this.isSubdivided())
         for (var id in this.nodes)
         {
-          visibility = options.frustum.cube(this.nodes[id].position, this.nodes[id].width, this.nodes[id].height, this.nodes[id].depth);
-          if (visibility == Frustum.INTERSECT)
-            this.nodes[id].render(options);
-          else if (visibility == Frustum.INSIDE)
-            this.nodes[id].renderObjects(options);
+          if (this.nodes[id].isSubdivided() || this.nodes[id].objects.length > 0)
+          {
+            visibility = frustum.cube(this.nodes[id].position, this.nodes[id].width, this.nodes[id].height, this.nodes[id].depth);
+            if (visibility == Frustum.INTERSECT)
+              this.nodes[id].render(options);
+            else if (visibility == Frustum.INSIDE)
+              this.nodes[id].renderObjects(options);
+          }
         }
       else this.renderObjects(options);
       
@@ -218,8 +222,18 @@ var Octree = (function() {
      */
     renderObjects: function(options) {
       /* TODO make a decision whether we should frustum cull objects individually. Right now I'd say no. */
-      for (var i = 0; i < this.objects.length; i++)
-        this.objects[i].render(options);
+      var i;
+      
+      if (options.render_objects)
+      {
+        for (i = 0; i < this.objects.length; i++)
+          this.objects[i].render(options);
+        if (this.isSubdivided())
+        {
+          for (i in this.nodes)
+            this.nodes[i].renderObjects(options);
+        }
+      }
     },
     
     addObject: function(obj) {
@@ -227,13 +241,25 @@ var Octree = (function() {
       this.normalized = false;
       
       /* TODO add a position listener to the object so that non-static objects can be used */
-      recalculateNodeSize(this);
       this.objects.push(obj);
     },
     
     normalize: function() {
+      recalculateNodeSize(this);
+
       if (this.objects.length >= this.max_objects && this.max_levels > 0)
         subdivide(this);
+      
+      /* handle any objects added after subdivision */
+      if (this.isSubdivided())
+      {
+        var i;
+        for (i = this.objects.length-1; i >= 0; i--)
+          delegateObjectToNode(this, this.objects.pop());
+        for (i in this.nodes)
+          this.nodes[i].normalize();
+      }
+
       this.normalized = true;
     },
     
@@ -268,11 +294,9 @@ var Octree = (function() {
           vertices.push( 0.05, -0.05, 0);
           vertices.push( 0,     0,   -0.05);
           vertices.push( 0,     0,    0.05);
-        }
-//        
-//        update: function(tc) {
-//          renderable.orientation.setPosition(self.position);
-//        }
+        },
+        
+        update: null
       });
       
       self.renderable = renderable;
