@@ -8,6 +8,12 @@ var Mesh = function() {
         colors.push(color[j]);
     return colors;
   }
+  
+  // this method was added when the context requirement for #rebuild was removed. It's here as a compatibility layer
+  // to future proof against any further changes.
+  function assertBuilt(self) {
+    if (!self.built) self.rebuild();
+  }
 
   function buildTexture(self, context, descriptor) {
     var coords = [];
@@ -21,17 +27,6 @@ var Mesh = function() {
     }
   }
   
-  function disposeBuffer(self, name, context)
-  {
-    var buf = self["get"+name]();
-    if (buf) {
-      if (buf.dispose) buf.dispose();
-      // since there's a Buffer object now, this next should never happen - but it's not hurting...
-      else context.deleteBuffer(buf);
-      self["set"+name](null);
-    }
-  }
-  
   // class
   return Class.create({
     initialize: function(init_func)
@@ -41,7 +36,7 @@ var Mesh = function() {
       
       if (init_func) self.init = init_func;
       
-      self.built = {};
+      self.built = false;
       self.buffers = {};
       self.textures = [];
       self.textureBuildQueue = [];
@@ -66,7 +61,6 @@ var Mesh = function() {
     setTexture: function(index, tex, options) {
       var self = this, j;
       options = options || {};
-      var context = options.context;
       
       logger.attempt("Mesh#setTexture", function() {
         if (index < 0)   throw new Error("Invalid texture index: "+index);
@@ -108,10 +102,10 @@ var Mesh = function() {
       });
     },
     
-    getVertexBuffer:        function() { return this.buffers.vertices; },
-    getColorBuffer:         function() { return this.buffers.colors;   },
-    getIndexBuffer:         function() { return this.buffers.indices;  },
-    getNormalBuffer:        function() { return this.buffers.normals;  },
+    getVertexBuffer:        function() { assertBuilt(this); return this.buffers.vertices; },
+    getColorBuffer:         function() { assertBuilt(this); return this.buffers.colors;   },
+    getIndexBuffer:         function() { assertBuilt(this); return this.buffers.indices;  },
+    getNormalBuffer:        function() { assertBuilt(this); return this.buffers.normals;  },
     
     setVertexBuffer:        function(buf) { this.buffers.vertices = buf; },
     setColorBuffer:         function(buf) { this.buffers.colors   = buf; },
@@ -122,12 +116,7 @@ var Mesh = function() {
       if (color.length == 4) { this.color = color; this.colors = []; }
       else if (arguments.length == 4) { this.setColor([arguments[0], arguments[1], arguments[2], arguments[3]]); return; }
       else this.colors = color;
-      this.built = {}; // schedule a rebuild since we don't have a context right now
-    },
-    
-    isBuiltFor: function(context) {
-      if (!context) throw new Error("No context given!");
-      return (this.built && this.built[context.id]);
+      this.built = false; // schedule a rebuild since we don't have a context right now
     },
     
     rebuildAll: function() { this.invalidate(); },
@@ -140,21 +129,15 @@ var Mesh = function() {
     lowest: function() { return this.lowest_point; },
     
     render: function(options) {
-      var context = options.context, shader = options.shader, mode = options.mode || FILL;
+      var shader = options.shader, 
+          mode = options.mode || FILL;
       
       var self = this;
       logger.attempt('Mesh#render', function() {
-        if (!context) throw new Error("Cannot render without a context!");
         
         // make sure everything's up to date.
         if (self.texture && self.texture != self.textures[0]) self.setTexture(0, self.texture);
-        if (!self.isBuiltFor(context))
-          self.rebuild(context);
-        
-        // get the active shader
-        if (typeof(shader) == "string") shader = context.shaders[shader];
-        
-        options.context = context;
+
         options.shader = shader;
         options.mode = mode;
         self.draw(options);
@@ -171,6 +154,11 @@ var Mesh = function() {
       var context = options.context, shader = options.shader, mode = options.mode;
       var self = this;
 
+      if (!context) throw new Error("Cannot draw without a context!");
+
+      // get the active shader
+      if (typeof(shader) == "string") shader = context.shaders[shader];
+        
       if (!shader) throw new Error("Cannot render without a shader!");
       if (typeof(shader) != "object") throw new Error("Shader was expected to be an object, but is: "+JSON.stringify(shader));
       if (!shader.getCompiledProgram) throw new Error("Shader is not dynamic!");
@@ -222,17 +210,20 @@ var Mesh = function() {
       });
     },
     
-    dispose: function(context) {
+    dispose: function() {
       var self = this;
       logger.attempt("Mesh#dispose", function() {
-        if (!context) throw new Error("No context given!");
-        if (!self.built[context.id]) return; // nothing to dispose
-        
-        self.built[context.id] = false;
-        disposeBuffer(self, 'VertexBuffer', context);
-        disposeBuffer(self, 'ColorBuffer',  context);
-        disposeBuffer(self, 'IndexBuffer',  context);
-        disposeBuffer(self, 'NormalBuffer', context);
+        if (!self.built) return;
+        /* FIXME no idea why we need to check the buffer first */
+        var buf;
+        if (buf = self.getVertexBuffer()) buf.dispose();
+        if (buf = self.getColorBuffer()) buf.dispose();
+        if (buf = self.getIndexBuffer()) buf.dispose();
+        if (buf = self.getNormalBuffer()) buf.dispose();
+//        self.getVertexBuffer().dispose();
+//        self.getColorBuffer().dispose();
+//        self.getIndexBuffer().dispose();
+//        self.getNormalBuffer().dispose();
         self.buffers = {};
         self.originalTextureCoords = null;
         for (var i = 0; i < self.textures.length; i++)
@@ -242,29 +233,25 @@ var Mesh = function() {
               self.textures[i].buffers[bufname].dispose();
               self.textures[i].buffers[bufname].valid = false;
             }
+        self.built = false;
       });
     },
     
-    // forces this object to be rebuilt for every context.
+    // forces this object to be rebuilt.
     invalidate: function() {
-      for (var id in this.built) {
-        if (this.built[id])
-          this.dispose(this.built[id]);
-      }
+      this.dispose();
     },
     
     after_render: function(func) {
       this.after_render_queue.push(func);
     },
     
-    rebuild: function(context) {
+    rebuild: function() {
       var self = this;
       logger.attempt("Mesh#rebuild", function() {
-        if (!context) throw new Error("Can't rebuild without a context!");
-        self.dispose(context);
-        var gl = context.gl;
+        self.dispose();
         self.draw_mode = typeof(self.draw_mode) == "undefined" ? GL_TRIANGLES : self.draw_mode;
-        self.built[context.id] = context;
+        self.built = true;
   
         var vertices = [], colors = [], textureCoords = [], normals = [], indices = [];
         if (self.init) self.init(vertices, colors, textureCoords, normals, indices);

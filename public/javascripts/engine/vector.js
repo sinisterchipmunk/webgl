@@ -33,6 +33,7 @@ Array.prototype._vectorize = function(other, y, z, w) {
 };
 
 Array.prototype.innerProduct = function(other) {
+  if (arguments.length == 3) return this[0]*arguments[0] + this[1]*arguments[1] + this[2]*arguments[2];
   return (this[0]*other[0] + this[1]*other[1] + this[2]*other[2]);
 };
 

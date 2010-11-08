@@ -4,6 +4,10 @@ class EngineTestsController < ApplicationController
   before_filter :add_all_shaders
   before_filter :add_particle_systems
   
+  def octree
+    dependencies << "engine/heightmap" << "culling/octree" << "objects/sphere" << "objects/cube" << "objects/quad"
+  end
+  
   def index
   end
   

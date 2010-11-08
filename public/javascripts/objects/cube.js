@@ -64,7 +64,6 @@ var Cube = (function() {
         push(0); push(1); push(2); // tri1
         push(1); push(2); push(3); // tri2
       }
-      logger.info(vertices.toSource());
     },
     
     update: null // what's there to update?

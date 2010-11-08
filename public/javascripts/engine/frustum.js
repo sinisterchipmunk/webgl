@@ -36,6 +36,33 @@ var Frustum = (function() {
     return {ntl:ntl, ntr:ntr, nbl:nbl, nbr:nbr, ftl:ftl, ftr:ftr, fbl:fbl, fbr:fbr};
   }
   
+  function varcube(self, position, w, h, d)
+  {
+    if (!self.mv || !self.p) return INSIDE;
+    var p, c, c2 = 0, plane;
+    
+    w = w / 2.0;
+    h = h / 2.0;
+    d = d / 2.0;
+    
+    for (p in self.planes)
+    {
+      plane = self.planes[p];
+      c = 0;
+      if (plane.distance(position[0]+w, position[1]+h, position[2]+d) > 0) c++;
+      if (plane.distance(position[0]-w, position[1]+h, position[2]+d) > 0) c++;
+      if (plane.distance(position[0]+w, position[1]-h, position[2]+d) > 0) c++;
+      if (plane.distance(position[0]-w, position[1]-h, position[2]+d) > 0) c++;
+      if (plane.distance(position[0]+w, position[1]+h, position[2]-d) > 0) c++;
+      if (plane.distance(position[0]-w, position[1]+h, position[2]-d) > 0) c++;
+      if (plane.distance(position[0]+w, position[1]-h, position[2]-d) > 0) c++;
+      if (plane.distance(position[0]-w, position[1]-h, position[2]-d) > 0) c++;
+      if (c == 0) return OUTSIDE;
+      if (c == 8) c2++;
+    }
+      
+    return (c2 == 6) ? INSIDE : INTERSECT;
+  }
   
   function extractFrustum(self)
   {
@@ -93,8 +120,18 @@ var Frustum = (function() {
       return result;
     },
     
+    /* Arguments can either be an array of indices, or a position array [x,y,z] followed by width, height and depth.
+        Examples:
+          var cube = new Cube(...);
+          frustum.cube(cube.getCorners());
+          frustub.cube(cube.orientation.getPosition(), 1);
+          frustub.cube(cube.orientation.getPosition(), 1, 2, 3);
+     */
     cube: function(corners)
     {
+      if (arguments.length == 2) { return varcube(this, arguments[0], arguments[1], arguments[1], arguments[1]); }
+      if (arguments.length == 4) { return varcube(this, arguments[0], arguments[1], arguments[2], arguments[3]); }
+      
       if (!this.mv || !this.p) return INSIDE;
       if (arguments.length > 1) { corners = arguments; }
       var p, c, c2 = 0, i, num_corners = corners.length, plane;

@@ -21,9 +21,11 @@ var Plane = Class.create({
   
   distance: function(point)
   {
-    if (arguments.length == 3) points = [arguments[0], arguments[1], arguments[2]];
+    var x, y, z;
+    if (arguments.length == 3) { x = arguments[0]; y = arguments[1]; z = arguments[2]; }
+    else { x = point[0]; y = point[1]; z = point[2]; }
     // same as ax + by + cz + d
-    return this.d + this.normal.innerProduct(point);
+    return this.d + this.normal.innerProduct(x, y, z);
   },
   
   whereis: function(point)

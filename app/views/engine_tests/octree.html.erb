@@ -1,0 +1,73 @@
+<script>
+<%content_for :global do%>
+  var octree = new Octree();
+
+  function updateKeyboardInput()
+  {
+    logger.attempt("update keyboard input", function() {
+      var rotation = [0,0,0];
+      var translation = [0,0,0];
+      var movement_speed = 1.5; // in GL units per second
+      var rotation_speed = 0.5;
+      var strafing_speed = 1.0;
+    
+      movement_speed *= 0.15; // we multiply by time passed. For any real world application we'd not rely on
+      rotation_speed *= 0.15; // setInterval and we'd calculate actual time elapsed instead.
+      strafing_speed *= 0.15;
+    
+      if (currentlyPressedKeys[37]) rotation[1] -= rotation_speed; // arrow left
+      if (currentlyPressedKeys[39]) rotation[1] += rotation_speed; // arrow right
+      if (currentlyPressedKeys[38]) rotation[0] += rotation_speed; // arrow up
+      if (currentlyPressedKeys[40]) rotation[0] -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[87]) translation[2] += 1; // W
+      if (currentlyPressedKeys[83]) translation[2] -= 1; // S
+      if (currentlyPressedKeys[65]) translation[0] -= 1; // A
+      if (currentlyPressedKeys[68]) translation[0] += 1; // D
+    
+      if (translation[2] != 0) world.camera.move(translation[2]*movement_speed);
+      if (translation[0] != 0) world.camera.strafe(translation[0]*strafing_speed);
+      if (rotation.magnitude() > 0) world.camera.rotateView(rotation);
+    });
+  }
+<%end%>
+  
+<%content_for :init do%>
+  for (var x = -10; x <= 10; x += 2)
+    for (var y = -2; y <= 2; y += 2)
+      for (var z = -10; z <= 10; z += 2)
+      {
+        if (x != 0 || y != 0 || z != 0)
+        {
+          var sphere = new Sphere({radius:0.25,slices:24,stacks:24});
+          sphere.mesh.setColor(Math.abs(x/10.0), Math.abs(y/6.0), Math.abs(z/10.0), 1);
+          sphere.mesh.addTexture(Texture.instance("/images/textures/particle.png"));
+          sphere.orientation.setPosition(x, y, z);
+          octree.addObject(sphere);
+        }
+      }
+
+  setInterval(updateKeyboardInput, 30);
+<%end%>
+        
+<%content_for :render do%>
+  world.camera.look(world.context.gl);
+  // this would normally be called, for example, by the world itself.
+  octree.render({context:world.context, frustum:world.camera.frustum, render_octree:$("render-octree").checked});
+<%end%>
+</script>
+
+<p>This test demonstrates octree culling, which constructs bounding volumes around groups of objects so that they can be
+collectively tested against the frustum. The result is a much faster test at the expense of accuracy.</p>
+
+<p>Octrees are subdivided into smaller octrees, until some threshold has been reached. (For this demo, the threshold is
+a maximum of 8 sub-levels to stop subdividing, and a minimum of 8 objects to start subdividing.) If an entire node is
+visible, no further testing is done; if it is partially visible, then its subnodes are tested; if it is not visible,
+then it and all its subnodes are omitted. Render the node boundaries to see this test in action. As an entire node is
+made visible, its subnodes will not be tested and, therefore, their boundaries will not be drawn.</p>
+
+<p>Note that there is a performance hit even for rendering the node boundaries, so when lots of nodes are being tested,
+try disabling node boundaries and note the difference.</p>
+
+<p>
+  <input type="checkbox" checked id="render-octree" /> Render Node Boundaries
+</p>
