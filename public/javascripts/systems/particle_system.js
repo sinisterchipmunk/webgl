@@ -79,11 +79,17 @@ var ParticleSystem = (function() {
       
       var i;
       if (options.texture)
-        this.mesh.addTexture(Texture.instance(options.texture));
+        if (options.texture.bind)
+          this.mesh.addTexture(options.texture);
+        else
+          this.mesh.addTexture(Texture.instance(options.texture));
       
       if (options.textures)
         for (i = 0; i < options.textures.length; i++)
-          this.mesh.addTexture(Texture.instance(options.textures[i]));
+          if (options.textures[i].bind)
+            this.mesh.addTexture(options.textures[i]);
+          else
+            this.mesh.addTexture(Texture.instance(options.textures[i]));
       
       this.internal = { numLiving: 0, bounding_box: [], after_initialize: options.after_initialize };
       for (i = 0; i < this.particle_count; i++)
@@ -283,19 +289,19 @@ var ParticleSystem = (function() {
           colors.push(0,0,0,0,  0,0,0,0,  0,0,0,0,  0,0,0,0,  0,0,0,0,  0,0,0,0); // These are altered per-particle.
         
           //tri1
-          texcoords.push(0, 0); //v0
-          texcoords.push(1, 0); //v1
-          texcoords.push(0, 1); //v2
+          texcoords.push(0, 1); //v0
+          texcoords.push(1, 1); //v1
+          texcoords.push(0, 0); //v2
           //tri2
-          texcoords.push(1, 0); //v1
-          texcoords.push(0, 1); //v2
-          texcoords.push(1, 1); //v3
+          texcoords.push(1, 1); //v1
+          texcoords.push(0, 0); //v2
+          texcoords.push(1, 0); //v3
         }
       }
       
       if (shape_length == 3) // POINT
         this.draw_mode = GL_POINTS;
-      if (self.internal.after_initialize) self.internal.after_initialize.apply(self, []);
+      if (self.internal.after_initialize) self.internal.after_initialize.apply(self, [vertices, colors, texcoords, normals, indices]);
     }
   });
   

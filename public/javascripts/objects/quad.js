@@ -23,9 +23,9 @@ var Quad = Class.create(Renderable, {
     vertices.push( width/2, -height/2, 0);
     vertices.push( width/2,  height/2, 0);
       
-    textureCoords.push(0, 0);
     textureCoords.push(0, 1);
-    textureCoords.push(1, 0);
+    textureCoords.push(0, 0);
     textureCoords.push(1, 1);
+    textureCoords.push(1, 0);
   }
 });

@@ -8,6 +8,10 @@ class EngineTestsController < ApplicationController
     dependencies << "engine/heightmap" << "culling/octree" << "objects/sphere" << "objects/cube" << "objects/quad"
   end
   
+  def video_texture
+    dependencies << "objects/quad" << "engine/video_texture"
+  end
+  
   def index
   end
   

@@ -216,6 +216,34 @@ var Octree = (function() {
       if (options.render_octree) this.getRenderable().render(options);
     },
     
+    /* Returns all objects associated with this octree (or its nodes) that are currently visible in the given frustum.
+       The individual objects are not tested; only subnodes. Therefore, if there are no subnodes, all objects will be
+       returned regardless of whether they are visible.
+    */
+    getVisible: function(frustum) {
+      if (!this.normalized) this.normalize();
+
+      var visibility;
+      var all = [], i;
+      if (this.isSubdivided()) {
+        for (var id in this.nodes)
+        {
+          if (this.nodes[id].isSubdivided() || this.nodes[id].objects.length > 0)
+          {
+            visibility = frustum.cube(this.nodes[id].position, this.nodes[id].width, this.nodes[id].height, this.nodes[id].depth);
+
+            if (visibility == Frustum.INTERSECT)
+              all = all.concat(this.nodes[id].getVisible(frustum));
+            else if (visibility == Frustum.INSIDE)
+              all = all.concat(this.nodes[id].objects);
+          }
+        }
+      } else {
+        all = all.concat(this.objects);
+      }
+      return all;
+    },
+    
     /*
       Renders all objects within this octree. Child nodes will not be rendered regardless of options, but the objects
       within them will be.

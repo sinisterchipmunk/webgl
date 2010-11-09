@@ -199,6 +199,46 @@ Camera.prototype.lookAt = function(vec, y, z) {
   return this;
 };
 
+// Converts screen coordinates into a ray segment with one point at the NEAR plane and the other
+// at the FAR plane relative to the camera's current matrices.
+// Code adapted from gluUnproject(), found at http://www.opengl.org/wiki/GluProject_and_gluUnProject_code
+Camera.prototype.unproject = function(context, winx, winy, winz) {
+  if (typeof(winx) != "number" || typeof(winy) != "number") { throw new Error("one or both of X / Y is missing"); }
+
+  // winz is either 0 (near plane), 1 (far plane) or somewhere in between.
+  // if it's not given a value we'll produce coords for both.
+  if (typeof(winz) == "number") {
+    winx = parseFloat(winx);
+    winy = parseFloat(winy);
+    winz = parseFloat(winz);
+  
+    var inf = [];
+    var mm = this.getMatrix(), pm = this.getProjectionMatrix();
+    var viewport = [0, 0, context.gl.viewportWidth, context.gl.viewportHeight];
+
+    //Calculation for inverting a matrix, compute projection x modelview; then compute the inverse
+    var m = pm.multiply(mm).inverse();
+
+    // Transformation of normalized coordinates between -1 and 1
+    inf[0]=(winx-viewport[0])/viewport[2]*2.0-1.0;
+    inf[1]=(winy-viewport[1])/viewport[3]*2.0-1.0;
+    inf[2]=2.0*winz-1.0;
+    inf[3]=1.0;
+
+    //Objects coordinates
+    var out = m.multiply($V(inf)).elements;
+    if(out[3]==0.0)
+       return null;
+
+    out[3]=1.0/out[3];
+    return [out[0]*out[3], out[1]*out[3], out[2]*out[3]];
+  }
+  else
+  {
+    return [this.unproject(context, winx, winy, 0), this.unproject(context, winx, winy, 1)];
+  }
+};
+
 /* Rotates the view vector of this Camera, effectively "turning" to look in a new direction. This is very useful
    when linked with mouse coordinates, or joystick axes, for instance.
    

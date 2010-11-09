@@ -34,6 +34,10 @@ function World(context)
 }
 
 World.prototype = {
+  // Converts screen coordinates into a ray segment with one point at the NEAR plane and the other
+  // at the FAR plane relative to the camera's current matrices.
+  unproject: function(x, y, z) { return this.camera.unproject(this.context, x, y, z); },
+  
   render: function(mode) {
     mvPushMatrix();
       this.frame_count++;

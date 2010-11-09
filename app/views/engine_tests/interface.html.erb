@@ -8,48 +8,6 @@
   var destination = null;
   var selectionQuad = null;
 
-  /* TODO: seriously, move this to the Camera class. And add a dedicated test for it, too. */
-  // Converts screen coordinates into a ray segment with one point at the NEAR plane and the other
-  // at the FAR plane relative to the camera's current matrices.
-  // Code adapted from gluUnproject(), found at http://www.opengl.org/wiki/GluProject_and_gluUnProject_code
-  function unproject(winx, winy, winz)
-  {
-    if (!winx || !winy) { throw new Error("one or both of X / Y is missing"); }
-
-    // winz is either 0 (near plane), 1 (far plane) or somewhere in between.
-    // if it's not given a value we'll produce coords for both.
-    if (typeof(winz) == "number") {
-      winx = parseFloat(winx);
-      winy = parseFloat(winy);
-      winz = parseFloat(winz);
-    
-      var inf = [];
-      var mm = world.camera.getMatrix(), pm = world.camera.getProjectionMatrix();
-      var viewport = [0, 0, world.context.gl.viewportWidth, world.context.gl.viewportHeight];
-
-      //Calculation for inverting a matrix, compute projection x modelview; then compute the inverse
-      var m = pm.multiply(mm).inverse();
-
-      // Transformation of normalized coordinates between -1 and 1
-      inf[0]=(winx-viewport[0])/viewport[2]*2.0-1.0;
-      inf[1]=(winy-viewport[1])/viewport[3]*2.0-1.0;
-      inf[2]=2.0*winz-1.0;
-      inf[3]=1.0;
-
-      //Objects coordinates
-      var out = m.multiply($V(inf)).elements;
-      if(out[3]==0.0)
-         return null;
-
-      out[3]=1.0/out[3];
-      return [out[0]*out[3], out[1]*out[3], out[2]*out[3]];
-    }
-    else
-    {
-      return [unproject(winx, winy, 0), unproject(winx, winy, 1)];
-    }
-  }
-
   function updateKeyboardInput()
   {
     logger.attempt("update keyboard input", function() {
@@ -108,7 +66,6 @@
   selectionQuad.orientation.orient([0,1,0],[0,0,1],[1,0,0],[0,20,0]);
   selectionQuad.orientation.look();
   selectionQuad.mesh.texture = new Texture("/images/selection.png");
-//  selectionQuad.shader = 'color_with_texture';
 
   world.camera.moveTo(35, 75, 42);
   world.camera.orient([0, -1, -0.2], [0, 0.2, -1]).look();
@@ -168,11 +125,11 @@
   }
   else
   {
-    var ray = unproject(mouse.x, world.context.gl.viewportHeight - mouse.y);
+    var ray = world.unproject(mouse.x, world.context.gl.viewportHeight - mouse.y);
     _debug_ray.set(ray[0], ray[1]);
                  
     // line-segment/triangle collision detection
-    // this belongs...er...somewhere else. (am i really writing a coldet library now??)
+    /* TODO: this belongs...er...somewhere else. (am i really writing a coldet library now??) */
     // adapted from: http://softsurfer.com/Archive/algorithm_0105/algorithm_0105.htm#intersect_RayTriangle%28%29
     function coldet_segm_tri(segm, tri, I) // coldet_segm_tri([[0,0], [1,0]], [[0,0,0], [0,1,0], [1,0,0]]);
     {
@@ -231,33 +188,37 @@
         v2 = [];
     var candidates = [];
     var holder = [];
-    var tri = [];
+    var tri;
     var j;
     
-    for (var i = 6; i < heightMap.triangles.length; i += 3)
+    // see which vertices are visible
+    var visible = heightMap.octree.getVisible(world.camera.frustum);
+    for (var i = 0; i < visible.length; i++)
     {
-      for (j = 0; j < 3; j++)
-      {
-        if (i > 6)
-        {
-          v0[j] = v1[j];
-          v1[j] = v2[j];
-        }
-        v2[j] = heightMap.triangles[i+j];
-      }
-      
-      tri[0] = v0;
-      tri[1] = v1;
-      tri[2] = v2;
-      if (coldet_segm_tri(ray, tri, holder) == 1)
+      tri = visible[i].vertices;
+      tri = [[tri[0]+visible[i].position[0],tri[1]+visible[i].position[1],tri[2]+visible[i].position[2]],
+             [tri[3]+visible[i].position[0],tri[4]+visible[i].position[1],tri[5]+visible[i].position[2]],
+             [tri[6]+visible[i].position[0],tri[7]+visible[i].position[1],tri[8]+visible[i].position[2]]];
+      if (coldet_segm_tri(ray, tri, holder))
       {
         candidates.push(holder);
         holder = [];
       }
     }
     
-    // we should really take the closest candidate to the camera, instead of just the first one in the list.
-    destination = candidates[0];
+    
+    // find the candidate that is closest to the camera
+    var closest = null, closestDist = null;
+    for (var i = 0; i < candidates.length; i++)
+    {
+      var d = world.camera.getPosition().minus(candidates[i]).magnitude();
+      if (closest == null || closestDist > d) {
+        closest = candidates[i];
+        closestDist = d;
+      }
+    }
+    
+    destination = closest;
     if (selectedCreature)
     {
       selectedCreature.ai.moveTo(destination, function(creature) { creature.playAnimation("stand", true); });

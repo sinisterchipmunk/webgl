@@ -32,11 +32,6 @@ var Texture = Class.create({
   },
   
   generateTexture: function(context, image, texture) {
-    /*
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);  
-    gl.generateMipmap(gl.TEXTURE_2D);
-    */
     context.bindTexture(this.target, texture);  
     context.texImage2D(this.target, 0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, image);
     context.texParameteri(this.target, GL_TEXTURE_MAG_FILTER, this.mag_filter);  

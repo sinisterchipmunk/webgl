@@ -26,14 +26,15 @@ var AI = Class.create({
       var distance = self.movement.destination.minus(current[0], current[1]+self.lowest(), current[2]);
       var direction = distance.normalize();
       var difference = direction.times(total_movement);
+      var scalarDistance = distance.magnitude();
       // don't go too far!
-      if (total_movement > distance.magnitude())
+      direction[1] = 0;
+      if (total_movement > scalarDistance || direction.magnitude() <= 0.25)
       {
         difference = distance;
         self.movement.destination = null;
       }
       
-      direction[1] = 0;
       self.orientation.setView(direction);
       self.orientation.setPosition(current.plus(difference));
       

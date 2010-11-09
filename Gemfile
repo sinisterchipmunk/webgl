@@ -3,6 +3,7 @@ source 'http://rubygems.org'
 gem 'rails', '3.0.0'
 gem 'md2'
 gem 'json'
+gem 'bot-away'
 
 # Bundle edge Rails instead:
 # gem 'rails', :git => 'git://github.com/rails/rails.git'

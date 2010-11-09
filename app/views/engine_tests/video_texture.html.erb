@@ -1,0 +1,86 @@
+<script>
+<%content_for :global do%>
+var go = false;
+var reverse = true;
+<%end%>
+  
+<%content_for :init do%>
+  var tex = new VideoTexture("/video/bbb400p.ogv");
+  /*
+  binding tex to a quad and adding it to world would would be enough... ooh, but particle systems are cool...
+  
+    var quad = new Quad(1,0.75);
+    quad.mesh.addTexture(tex);
+    world.addObject(quad);
+   */
+
+  world.camera.moveTo(0,0,10);
+
+
+  world.particle_systems.add(new ParticleSystem({
+    particle_count: 25,
+    shape: ParticleSystem.Shape.SQUARE,
+    texture: tex,
+    
+    after_initialize: function(vertices, colors, texcoords, normals, indices) {
+      for (var i = 0; i < texcoords.length; i += 12)
+      {
+        var j = (i / 12);// / 2;
+
+        var tx = (j%5) / 5.0;
+        var ty = parseInt(j/5) / 5.0;
+        
+        var tx2 = tx + (1.0 / 5.0), ty2 = ty + (1.0 / 5.0);
+
+        texcoords[i  ] = -tx;
+        texcoords[i+1] = ty2;
+        texcoords[i+2] = -tx2;
+        texcoords[i+3] = ty2;
+        texcoords[i+4] = -tx;
+        texcoords[i+5] = ty;
+
+        texcoords[i+6]  = -tx2;
+        texcoords[i+7]  = ty2;
+        texcoords[i+8]  = -tx;
+        texcoords[i+9]  = ty;
+        texcoords[i+10] = -tx2;
+        texcoords[i+11] = ty;
+      }
+    },
+    
+    revive_particle: function(particle) {
+      particle.energy = 1;
+      var px = 5 - particle.index % 5;
+      var py = 5 - parseInt(particle.index / 5) * 0.75;
+      
+      particle.position = [px - 2.5, py - 2.5, 0];
+      particle.size = [0.5,0.375,0.5]; // 0.375 == 0.5*0.75
+      particle.direction = particle.position.normalize();
+      particle.speed = Math.random() + 1;
+    },
+    
+    update_particle: function(particle, tc) {
+      if (go) {
+        particle.position[0] += particle.direction[0] * tc * (reverse ? -1 : 1) * particle.speed;
+        particle.position[1] += particle.direction[1] * tc * (reverse ? -1 : 1) * particle.speed;
+        particle.position[2] += particle.direction[2] * tc * (reverse ? -1 : 1) * particle.speed;
+        if (particle.position[0] < -6 || particle.position[0] > 6) particle.direction[0] = -particle.direction[0];
+        if (particle.position[1] < -4 || particle.position[1] > 4) particle.direction[1] = -particle.direction[1];
+      }
+    }
+  }));
+<%end%>
+        
+<%content_for :mouse_pressed do%>
+  go = true;
+  reverse = !reverse;
+<%end%>
+</script>
+
+<p>This demo only really tests video textures (which are super cool), but that was too easy, so I added some other
+stuff too.</p>
+
+<p>Click anywhere on the canvas to disturb the quad.</p>
+
+<p>As a note to self, Chrome doesn't play nicely with large files (or just videos?) served from Webrick. Test with
+  Apache instead. (Lost 2 days on that, would rather not lose 2 more to my bad memory...)</p>

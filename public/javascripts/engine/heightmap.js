@@ -120,6 +120,8 @@ var HeightMap = function() {
     
     draw: function($super, options) {
       $super(options);
+      /* Not sure where this belongs, but we should probably keep the octree normalized even when not in use. */
+      if (!this.octree.normalized) this.octree.normalize();
       if (this.render_octree)
         this.octree.render({render_octree:true,render_objects:false,context:options.context});
     },
@@ -131,6 +133,7 @@ var HeightMap = function() {
       self.draw_mode = GL_TRIANGLE_STRIP;
       
       var octree = new Octree();
+      var last = [];
       each_vertex(self, function(x, z) {
         y = self.height(x, z);
         if (isNaN(y)) alert(x+" "+z+" / "+self.width()+" "+self.depth());
@@ -142,7 +145,17 @@ var HeightMap = function() {
         
         textureCoords.push(x/self.width(), z/self.depth());
         
-        octree.addObject({vertices:[0,0,0],position:[x*self.scale, y, z*self.scale]});
+        if (last[0] && last[1]) {
+          var pos = [x*self.scale, 0, z*self.scale];
+
+          var obj = ({vertices:[],position:pos});
+          obj.vertices.push(  last[0][0]-pos[0], last[0][1],   last[0][2]-pos[2]);
+          obj.vertices.push(  last[1][0]-pos[0], last[1][1],   last[1][2]-pos[2]);
+          obj.vertices.push(                  0,          y,                   0);
+          octree.addObject(obj);
+        }
+        last[0] = last[1];
+        last[1] = [x*self.scale, y, z*self.scale];
       });
       
       self.octree = octree;

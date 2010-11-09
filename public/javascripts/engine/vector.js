@@ -17,9 +17,9 @@ Array.prototype.dup = function()
 Array.prototype._vectorize = function(other, y, z, w) {
   var result = [], i;
   if (typeof(other) == 'number') {
-    if (!y) { other = [other]; }
-    else if (!z) { other = [other, y]; }
-    else if (!w) { other = [other, y, z]; }
+    if (typeof(y) == "undefined") { other = [other]; }
+    else if (typeof(z) == "undefined") { other = [other, y]; }
+    else if (typeof(w) == "undefined") { other = [other, y, z]; }
     else { other = [other, y, z, w]; }
   }
   
