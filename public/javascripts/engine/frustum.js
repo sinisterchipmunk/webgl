@@ -82,6 +82,7 @@ var Frustum = (function() {
   var klass = Class.create({
     initialize: function(modelview, projection) {
       this.listeners = {update:[]};
+      this.callbacks = this.listeners;
       this.planes = {};
       for (var i = 0; i < 6; i++) this.planes[i] = new Plane();
       this.setMatrices(modelview, projection);

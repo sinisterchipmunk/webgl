@@ -27,7 +27,7 @@
   <%end%>
         
   <%content_for :render do %>
-    height_map.render_octree = $("show-octree").checked;
+    height_map.render_segments = $("show-segments").checked;
     world.render(WIREFRAME);
   <%end%>
 </script>
@@ -40,9 +40,5 @@ Height Map:<br/>
   This height map was built dynamically using the image above. Click on the height map canvas to switch to a new image.
 </p>
 <p>
-  <input type="checkbox" id="show-octree" /> Show Octree
-</p>
-<p>
-  Please take note that the decrease in framerate when rendering the octree is a product of the octree rendering
-  process, and is not a flaw in the octree itself.
+  <input type="checkbox" id="show-segments" /> Show Segments
 </p>

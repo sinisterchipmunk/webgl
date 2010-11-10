@@ -264,6 +264,19 @@ var Octree = (function() {
       }
     },
     
+    numLevels: function() {
+      if (!this.normalized) this.normalize();
+      if (this.isSubdivided())
+      {
+        var count = 0;
+        for (var i in this.nodes)
+          count = Math.max(count, this.nodes[i].numLevels());
+        return count+1;
+      }
+      
+      return 1;
+    },
+    
     addObject: function(obj) {
       /* invalidate the octree, because its bounds are no longer accurate and it may need to be subdivided. */
       this.normalized = false;

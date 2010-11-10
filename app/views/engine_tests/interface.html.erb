@@ -86,7 +86,7 @@
   world.context.gl.disable(GL_BLEND);
   world.render();
 
-  
+
   world.camera.look(world.context.gl);
   _debug_ray.render(world.context);
 
@@ -130,86 +130,77 @@
                  
     // line-segment/triangle collision detection
     /* TODO: this belongs...er...somewhere else. (am i really writing a coldet library now??) */
-    // adapted from: http://softsurfer.com/Archive/algorithm_0105/algorithm_0105.htm#intersect_RayTriangle%28%29
-    function coldet_segm_tri(segm, tri, I) // coldet_segm_tri([[0,0], [1,0]], [[0,0,0], [0,1,0], [1,0,0]]);
+    /* returns:
+        -1 = triangle is degenerate (a segment or point)
+         0 = disjoint (no intersection)
+         1 = intersect in unique point I
+     */
+    function coldet_segm_tri(segm, tri, I) // success=coldet_segm_tri([[0,0],[1,0]], [[0,0,0],[0,1,0],[1,0,0]], result);
     {
-      var u = tri[1].minus(tri[0]);
-      var v = tri[2].minus(tri[0]);
-      var n =  u.cross(v);
-      if (n[0] == 0 && n[1] == 0 && n[2] == 0) //triangle is degenerate
-        return -1;                             // do not deal with this case
+      function vector(a, b, c) { a[0] = b[0] - c[0]; a[1] = b[1] - c[1]; a[2] = b[2] - c[2]; }
+
+      var p = segm[0], d = segm[1].minus(segm[0]);
+      var v0 = tri[0], v1 = tri[1], v2 = tri[2];
+      var e1 = [], e2 = [], h = [], s = [], q = [];
+      var a, f, u, v;
       
-      var dir = segm[1].minus(segm[0]); // ray direction vector
-      var w0 = segm[0].minus(tri[0]);
-      var a = -(n.dot(w0));
-      var b = n.dot(dir);
-      if (Math.abs(b) < Math.EPSILON) // ray is parallel to triangle plane
-        if (a == 0)                   // ray lies in triangle plane
-          return 2;
-        else return 0;                // ray disjoint from plane
+      vector(e1, v1, v0);
+      vector(e2, v2, v0);
+      h = d.cross(e2);
+      a = e1.innerProduct(h);
       
-      // get intersect point of ray with triangle plane
-      var r = a / b;
-      if (r < 0.0) // ray goes away from triangle
-        return 0;   // => no intersect
-      // for a ray, don't test r > 1.0
-      if (r > 1.0)  // segment ends before triangle
-        return 0;   // => no intersect
+      if (a > -Math.EPSILON && a < Math.EPSILON) // triangle is degenerate
+        return -1;
       
-      I[0] = segm[0][0] + (dir[0]*r);
-      I[1] = segm[0][1] + (dir[1]*r);
-      I[2] = segm[0][2] + (dir[2]*r);
+      f = 1.0 / a;
+      vector(s,p,v0);
+      u = f * s.innerProduct(h);
       
-      // is I inside T?
-      var uu, uv, vv, wu, wv, D;
-      uu = u.dot(u);
-      uv = u.dot(v);
-      vv = v.dot(v);
-      w = I.minus(tri[0]);
-      wu = w.dot(u);
-      wv = w.dot(v);
-      D = uv * uv - uu * vv;
+      if (u < 0.0 || u > 1.0) return 0;
       
-      // get and test parametric coords
-      var s, t;
-      s = (uv * wv - vv * wu) / D;
-      if (s < 0.0 || s > 1.0)        // I is outside T
-        return 0;
-      t = (uv * wu - uu * wv) / D;
-      if (t < 0.0 || (s + t) > 1.0)  // I is outside T
-          return 0;
+      q = s.cross(e1);
+      v = f * d.innerProduct(q);
+      if (v < 0.0 || u + v > 1.0) return 0;
       
-      return 1; // I is in T
+      // at this stage we can compute t to find out where
+      // the intersection point is on the line
+      var t = f * e2.innerProduct(q);
+      if (t > Math.EPSILON) {
+        t = d.times(t).plus(p);
+        I[0] = t[0];
+        I[1] = t[1];
+        I[2] = t[2];
+        return 1;
+      }
+
+      // otherwise, there is a line intersection but not a ray intersection
+      return 0;
     }
     
     heightMap = world.scene;
-    var v0 = [heightMap.triangles[0], heightMap.triangles[1], heightMap.triangles[2]],
-        v1 = [heightMap.triangles[3], heightMap.triangles[4], heightMap.triangles[5]],
-        v2 = [];
+//    heightMap.render_segments = true;
+
     var candidates = [];
     var holder = [];
-    var tri;
-    var j;
+    var tri = [[], [], []];
+    var i, j;
     
     // see which vertices are visible
-    var visible = heightMap.octree.getVisible(world.camera.frustum);
-    for (var i = 0; i < visible.length; i++)
+    var visible = heightMap.getVisibleVertices(world.camera.frustum);
+    for (i = 0; i < visible.length; i += 9)
     {
-      tri = visible[i].vertices;
-      tri = [[tri[0]+visible[i].position[0],tri[1]+visible[i].position[1],tri[2]+visible[i].position[2]],
-             [tri[3]+visible[i].position[0],tri[4]+visible[i].position[1],tri[5]+visible[i].position[2]],
-             [tri[6]+visible[i].position[0],tri[7]+visible[i].position[1],tri[8]+visible[i].position[2]]];
-      if (coldet_segm_tri(ray, tri, holder))
-      {
+      for (j = 0; j < 9; j++)
+        tri[parseInt(j / 3)][j % 3] = visible[i+j];
+
+      var result = coldet_segm_tri(ray, tri, holder);
+      if (result > 0 && holder.length > 0)
         candidates.push(holder);
-        holder = [];
-      }
+      holder = [];
     }
-    
     
     // find the candidate that is closest to the camera
     var closest = null, closestDist = null;
-    for (var i = 0; i < candidates.length; i++)
+    for (i = 0; i < candidates.length; i++)
     {
       var d = world.camera.getPosition().minus(candidates[i]).magnitude();
       if (closest == null || closestDist > d) {
@@ -218,9 +209,9 @@
       }
     }
     
-    destination = closest;
-    if (selectedCreature)
+    if (closest && selectedCreature)
     {
+      destination = closest;
       selectedCreature.ai.moveTo(destination, function(creature) { creature.playAnimation("stand", true); });
       selectedCreature.playAnimation("run", true);
     }
@@ -237,8 +228,4 @@
 </p>
 <p>
   You can control the camera with W, S, A and D. Up and down arrows will change the camera's pitch.
-</p>
-<p>
-  You can also click on a creature, and tell the creature where to move by clicking on a location on the field.
-  This is still pretty buggy (and slow) and it still has a lot of room for improvement, but it does work.
 </p>

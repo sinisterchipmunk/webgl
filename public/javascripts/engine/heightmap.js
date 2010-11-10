@@ -68,6 +68,44 @@ var HeightMap = function() {
     
       this.magnitude = options.magnitude || 1;
       this.scale  = options.scale  || 1;
+      this.segment_size = options.segment_size || 40;
+      this.segments = [];
+      /* TODO segments should probably be an instance of a real class. */
+      this.segments.getRenderable = function() {
+        if (this.renderable) return this.renderable;
+        var hm = self;
+        var size = hm.segment_size;
+        var segms = this;
+        var renderable = this.renderable = new Renderable({
+          init: function(vertices, colors) {
+            this.draw_mode = GL_LINES;
+            for (var i = 0; i < segms.length; i++)
+            {
+              var center = segms[i].center;
+              var w = size / 2.0, h = hm.magnitude / 2.0, d = size / 2.0;
+              var tlb = [center[0]-w, center[1]+h, center[2]-d];
+              var trb = [center[0]+w, center[1]+h, center[2]-d];
+              var blb = [center[0]-w, center[1]-h, center[2]-d];
+              var brb = [center[0]+w, center[1]-h, center[2]-d];
+              var tlf = [center[0]-w, center[1]+h, center[2]+d];
+              var trf = [center[0]+w, center[1]+h, center[2]+d];
+              var blf = [center[0]-w, center[1]-h, center[2]+d];
+              var brf = [center[0]+w, center[1]-h, center[2]+d];
+              
+              var lines = [tlb,trb,  trb,brb,  brb,blb,  blb,tlb,
+                           tlf,trf,  trf,brf,  brf,blf,  blf,tlf,
+                           tlb,tlf,  trb,trf,  brb,brf,  blb,blf
+              ];
+              for (var j = 0;  j < lines.length; j++)
+              {
+                vertices.push(lines[j][0], lines[j][1], lines[j][2]);
+                colors.push(1,1,0,1);
+              }
+            }
+          }
+        });
+        return renderable;
+      };
       
       if (typeof(image) == "string") {
         var img = new Image();
@@ -86,6 +124,15 @@ var HeightMap = function() {
       }
     
       $super();
+    },
+    
+    getVisibleVertices: function(frustum) {
+      var visible = [];
+      var height = this.magnitude;
+      for (var i = 0; i < this.segments.length; i++)
+        if (this.segments[i].length > 0 && frustum.cubeVisible(this.segments[i].center, this.segment_size, height, this.segment_size))
+          visible = visible.concat(this.segments[i]);
+      return visible;
     },
     
     updateObjectPosition: function(world, object, oldPosition, newPosition) {
@@ -116,14 +163,36 @@ var HeightMap = function() {
       return this.data.map[z * this.width() + x] * this.magnitude;
     },
     
-    setMagnitude: function(mag) {  },
-    
     draw: function($super, options) {
       $super(options);
-      /* Not sure where this belongs, but we should probably keep the octree normalized even when not in use. */
-      if (!this.octree.normalized) this.octree.normalize();
-      if (this.render_octree)
-        this.octree.render({render_octree:true,render_objects:false,context:options.context});
+      if (this.render_segments)
+        this.segments.getRenderable().render(options);
+    },
+    
+    getHorizontalSegmentCount: function() {
+      return this.getSegmentIndex(this.width()) + 1;
+    },
+    
+    getVerticalSegmentCount: function() {
+      return this.getSegmentIndex(this.depth()) + 1;
+    },
+    
+    getSegmentIndex: function(i) {
+      return Math.round(parseFloat(i) / parseFloat(this.segment_size));
+    },
+    
+    getSegment: function(x, z) {
+      x = this.getSegmentIndex(x);
+      z = this.getSegmentIndex(z);
+      
+      var index = x * this.getVerticalSegmentCount() + z;
+      
+      if (this.segments[index]) return this.segments[index];
+      this.segments[index] = [];
+      var size = this.segment_size / 2.0;
+      this.segments[index].center = [(x * this.segment_size) + size, this.magnitude / 2.0, (z * this.segment_size) + size];
+      
+      return this.segments[index];
     },
     
     init: function(vertices, colors, textureCoords, normals, indices) {
@@ -132,33 +201,32 @@ var HeightMap = function() {
       
       self.draw_mode = GL_TRIANGLE_STRIP;
       
-      var octree = new Octree();
-      var last = [];
       each_vertex(self, function(x, z) {
         y = self.height(x, z);
         if (isNaN(y)) alert(x+" "+z+" / "+self.width()+" "+self.depth());
         vertices.push(x*self.scale, y, z*self.scale);
-        
+                
         y -= self.data.lowest;
         y = (y / (self.data.highest - self.data.lowest) / 2) + 0.5;
         colors.push(y, y, y, 1);
         
         textureCoords.push(x/self.width(), z/self.depth());
-        
-        if (last[0] && last[1]) {
-          var pos = [x*self.scale, 0, z*self.scale];
-
-          var obj = ({vertices:[],position:pos});
-          obj.vertices.push(  last[0][0]-pos[0], last[0][1],   last[0][2]-pos[2]);
-          obj.vertices.push(  last[1][0]-pos[0], last[1][1],   last[1][2]-pos[2]);
-          obj.vertices.push(                  0,          y,                   0);
-          octree.addObject(obj);
-        }
-        last[0] = last[1];
-        last[1] = [x*self.scale, y, z*self.scale];
       });
       
-      self.octree = octree;
+      var v0 = [vertices[0],vertices[1],vertices[2]], v1 = [vertices[3],vertices[4],vertices[5]];
+      for (var i = 6; i < vertices.length; i += 3)
+      {
+        var v2 = [vertices[i],vertices[i+1],vertices[i+2]];
+
+        var segment = self.getSegment(v0[0], v0[2]);
+        segment.push(v0[0], v0[1], v0[2]);
+        segment.push(v1[0], v1[1], v1[2]);
+        segment.push(v2[0], v2[1], v2[2]);
+        
+        v0 = v1;
+        v1 = v2;
+      }
+      
       self.triangles = vertices;  
 
       assert_equal(vertices.length / 3, colors.length / 4);

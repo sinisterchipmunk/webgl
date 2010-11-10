@@ -27,5 +27,6 @@ Creature.transaction do
                    {:name => "Demo - Laalaa",  :actor => laalaa_actor },
                    {:name => "Demo - Ogro",    :actor => ogro_actor   },
                    {:name => "Demo - Pknight", :actor => pknight_actor},
+                   {:name => "Ogro 2",         :actor => ogro_actor   }
                  ])
 end
