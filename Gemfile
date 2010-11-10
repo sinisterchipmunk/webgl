@@ -12,6 +12,10 @@ gem 'bot-away'
 #gem 'sparkly-auth', '>= 1.1.1'
 # gem 'jsbuilder'
 
+group :production do
+  gem 'mysql'
+end
+
 group :development, :test do
   gem 'sqlite3-ruby'
   gem "rspec-rails", ">= 2.0.0.beta.22"
