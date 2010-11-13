@@ -97,7 +97,7 @@
     selectionQuad.orientation.setPosition(pos[0], pos[1]+selectedCreature.lowest()+1, pos[2]);
 
     world.context.gl.enable(GL_BLEND);
-    world.context.gl.blendFunc(GL_SRC_ALPHA, GL_ONE);
+    world.context.gl.blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     selectionQuad.render(world.context);
     _debug_axis.render(world.context);
     

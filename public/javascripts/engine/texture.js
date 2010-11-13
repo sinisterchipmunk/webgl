@@ -8,18 +8,24 @@ var Texture = Class.create({
     self.target = GL_TEXTURE_2D;
     
     logger.attempt("Texture#initialize", function() {
+      var node_name = (path_or_image && path_or_image.nodeName && path_or_image.nodeName.toLowerCase());
       if (typeof(path_or_image) == 'string') {
         self.path = path_or_image;
         var img = new Image();
         img.onload = function() { self.handleTextureData(img); };
         img.src = self.path;
       }
-      else
+      else if (node_name && node_name == "image")
       {
         self.path = path_or_image.src;
         if (path_or_image.complete) self.handleTextureData(path_or_image);
         else path_or_image.onload = function() { self.handleTextureData(path_or_image); };
       }
+      else if (node_name && node_name == "canvas")
+      {
+        throw new Error("Canvas element texture detected -- use CanvasTexture() instead of Texture()");
+      }
+      else throw new Error("Don't know how to handle texture element: "+path_or_image);
     });
   },
   
@@ -31,9 +37,9 @@ var Texture = Class.create({
     });
   },
   
-  generateTexture: function(context, image, texture) {
-    context.bindTexture(this.target, texture);  
-    context.texImage2D(this.target, 0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, image);
+  refresh: function(context) {
+    context.bindTexture(this.target, this.glTexture);  
+    context.texImage2D(this.target, 0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, this.image);
     context.texParameteri(this.target, GL_TEXTURE_MAG_FILTER, this.mag_filter);  
     context.texParameteri(this.target, GL_TEXTURE_MIN_FILTER, this.min_filter);  
     context.generateMipmap(this.target);  
@@ -63,7 +69,7 @@ var Texture = Class.create({
       if (isLoaded) // loaded but not prepared
       {
         this.glTexture = context.createTexture();
-        this.generateTexture(context, this.image, this.glTexture)
+        this.refresh(context);
       }
     }
     
@@ -85,6 +91,9 @@ Texture.find_or_create = function(path) {
 };
 
 Texture.instance = function(attributes) {
-  return Texture.find_or_create(attributes.path ? attributes.path : attributes);
+  if (attributes.nodeName && attributes.nodeName.toLowerCase() == "canvas")
+    return (Texture.all[attributes] = Texture.all[attributes] || new Texture(attributes));
+  else
+    return Texture.find_or_create(attributes.path ? attributes.path : attributes);
   // TODO or we can switch to keying off of attributes.id, which would be more future-proof, but less flexible
 };

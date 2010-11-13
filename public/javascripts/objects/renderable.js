@@ -31,6 +31,7 @@ var Renderable = function() {
         self.mesh = new Mesh(function() {
           self.init && self.init.apply(self, arguments);
           self.mesh.draw_mode = typeof(self.draw_mode) == "undefined" ? GL_TRIANGLES : self.draw_mode;
+          if (self.after_initialize) self.after_initialize();
         });
         self.orientation = new Camera();
         self.pickShader = false;
@@ -119,6 +120,10 @@ var Renderable = function() {
       return getPickShader(this, context);
     },
     
+    applyMatrices: function(options) {
+      mvMatrix = mvMatrix.x(this.getTransformationMatrix());
+    },
+    
     render: function(options) {
       var self = this;
       if (options.id) options = {context:options}; // backward compatibility
@@ -138,13 +143,16 @@ var Renderable = function() {
         
         options.mode = options.mode || FILL;
         mvPushMatrix();
-          mvMatrix = mvMatrix.x(self.getTransformationMatrix());
-  
+        pPushMatrix();
+
+          self.applyMatrices(options);
+
           if (options.mode == RENDER_PICK && !options.shader) options.shader = getPickShader(self, options.context);
           else options.shader = options.shader || self.getDefaultShader();
   
           self.draw(options);
             
+        pPopMatrix();
         mvPopMatrix();
           
         for (var i = self.after_render_queue.length-1; i >= 0; i--)
@@ -188,25 +196,30 @@ var Renderable = function() {
         if (!context) throw new Error("Can't rebuild without a context!");
         
         self.dispose(context);
-        if (self.update)
-        {
-          var previousUpdate = new Date();
-          function update() {
-            if (self.update)
-            {
-              logger.attempt("update", function() {
-                var currentTime = new Date();
-                var timechange = currentTime - previousUpdate;
-                previousUpdate = currentTime;
-                self.update(timechange / 1000);
-              });
-            }
-            self.updateInterval = setTimeout(update, Renderable.update_interval);
+        self.startUpdating();
+      });
+    },
+    
+    startUpdating: function() {
+      var self = this;
+      if (self.update && !self.updateInterval)
+      {
+        var previousUpdate = new Date();
+        function update() {
+          if (self.update)
+          {
+            logger.attempt("update", function() {
+              var currentTime = new Date();
+              var timechange = currentTime - previousUpdate;
+              previousUpdate = currentTime;
+              self.update(timechange / 1000);
+            });
           }
-      
           self.updateInterval = setTimeout(update, Renderable.update_interval);
         }
-      });
+      
+        self.updateInterval = setTimeout(update, Renderable.update_interval);
+      }
     },
     
     rebuildAll: function() { this.invalidate(); }

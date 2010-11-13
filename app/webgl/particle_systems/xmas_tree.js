@@ -48,7 +48,7 @@
         case 3: particle.color[1] = 1; particle.color[2] = 1; break;
       }
     }
-    else                            // 90% of particles for tree
+    else                            // 80% of particles for tree
     {
       particle.color[0] = 0;
       particle.color[1] = 0.25 + Math.random()*0.25;

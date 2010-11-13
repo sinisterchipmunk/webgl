@@ -11,20 +11,30 @@ var Mesh = function() {
   
   // this method was added when the context requirement for #rebuild was removed. It's here as a compatibility layer
   // to future proof against any further changes.
-  function assertBuilt(self) {
-    if (!self.built) self.rebuild();
+  function ensureBuilt(self) {
+    if (!self.isValid()) self.rebuild();
   }
 
   function buildTexture(self, context, descriptor) {
-    var coords = [];
-    for (var i = 0; i < self.originalTextureCoords.length; i += 2)
-      coords.push(self.originalTextureCoords[i]*descriptor.scaleX, self.originalTextureCoords[i+1]*descriptor.scaleY);
+    ensureBuilt(self);
+    
+    var buf = descriptor.buffers[context.id];
+    var coords = (buf && buf.js) || [];
 
-    if (coords.length != 0)
+    for (var i = 0; i < self.originalTextureCoords.length; i += 2)
     {
-      descriptor.buffers[context.id] = new TextureCoordsBuffer(coords);
-      descriptor.buffers[context.id].valid = true;
+      coords[i  ] = self.originalTextureCoords[i  ]*descriptor.scaleX;
+      coords[i+1] = self.originalTextureCoords[i+1]*descriptor.scaleY;
     }
+
+    if (buf && buf.js)
+      buf.refresh();
+    else
+      if (coords.length > 0)
+      {
+        descriptor.buffers[context.id] = new TextureCoordsBuffer(coords);
+        descriptor.buffers[context.id].valid = true;
+      }
   }
   
   // class
@@ -59,14 +69,12 @@ var Mesh = function() {
        scaleY - just like scale, but is only applied vertically.
     */
     setTexture: function(index, tex, options) {
-      var self = this, j;
+      var self = this;
       options = options || {};
       
       logger.attempt("Mesh#setTexture", function() {
         if (index < 0)   throw new Error("Invalid texture index: "+index);
         if (index >= 32) throw new Error("WebGL does not support more than 32 texture bindings at once");
-        
-        self.originalTextureCoords = self.originalTextureCoords || [];
         
         var descriptor = self.textures[index] || {buffers:{}};
         self.textures[index] = descriptor;
@@ -83,29 +91,14 @@ var Mesh = function() {
           else throw new Error("Expected texture to be a String (filename) or Texture().");
         if (index == 0)  self.texture = descriptor;
         
-        
-        // free the GL buffers or they won't be rebuilt
-        for (var bufname in descriptor.buffers) {
-          var buffer = descriptor.buffers[bufname];
-                    
-          // clear the corresponding JS buffer so we can replace its contents
-          buffer.js.clear();
-
-          // fill it with the new data. Its GL counterpart will get rebuilt during the first render.
-          for (j = 0; j < self.originalTextureCoords.length; j += 2)
-            buffer.js.push(self.originalTextureCoords[j]*descriptor.scaleX,
-                           self.originalTextureCoords[j]*descriptor.scaleY);
-          
-          // refresh the buffer so the JS data makes its way into GL.
-          buffer.refresh();
-        }
+        descriptor.valid = false;
       });
     },
     
-    getVertexBuffer:        function() { assertBuilt(this); return this.buffers.vertices; },
-    getColorBuffer:         function() { assertBuilt(this); return this.buffers.colors;   },
-    getIndexBuffer:         function() { assertBuilt(this); return this.buffers.indices;  },
-    getNormalBuffer:        function() { assertBuilt(this); return this.buffers.normals;  },
+    getVertexBuffer:        function() { ensureBuilt(this); return this.buffers.vertices; },
+    getColorBuffer:         function() { ensureBuilt(this); return this.buffers.colors;   },
+    getIndexBuffer:         function() { ensureBuilt(this); return this.buffers.indices;  },
+    getNormalBuffer:        function() { ensureBuilt(this); return this.buffers.normals;  },
     
     setVertexBuffer:        function(buf) { this.buffers.vertices = buf; },
     setColorBuffer:         function(buf) { this.buffers.colors   = buf; },
@@ -127,6 +120,8 @@ var Mesh = function() {
     },
     
     lowest: function() { return this.lowest_point; },
+    
+    isValid: function() { return this.built },
     
     render: function(options) {
       var shader = options.shader, 
@@ -298,6 +293,8 @@ var Mesh = function() {
         for (var i = 0; i < self.textures.length; i++)
           if (self.textures[i])
             self.setTexture(i, self.textures[i].texture, self.textures[i]);
+        
+        if (self.after_initialize) self.after_initialize();
       });
     }
   });

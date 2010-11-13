@@ -4,7 +4,7 @@ var ParticleSystem = (function() {
       options:
         src_blend_mode - the source GL blend mode to use. Defaults to GL_SRC_ALPHA.
         
-        dst_blend_mode - the destination GL blend mode to use. Defaults to GL_ONE.
+        dst_blend_mode - the destination GL blend mode to use. Defaults to GL_ONE_MINUS_SRC_ALPHA.
         
         system_type    - the type of particle system. This is set by subclasses, and defaults to null.
         
@@ -67,8 +67,8 @@ var ParticleSystem = (function() {
     {
       $super();
       options = options || {};
-      this.src_blend_mode = typeof(options.src_blend_mode) == "undefined" ? GL_SRC_ALPHA : options.src_blend_mode;
-      this.dst_blend_mode = typeof(options.dst_blend_mode) == "undefined" ? GL_ONE       : options.dst_blend_mode;
+      this.src_blend_mode = typeof(options.src_blend_mode) == "undefined" ? GL_SRC_ALPHA           : options.src_blend_mode;
+      this.dst_blend_mode = typeof(options.dst_blend_mode) == "undefined" ? GL_ONE_MINUS_SRC_ALPHA : options.dst_blend_mode;
       this.system_type = options.type || null;
       this.particles = {};
       this.shape = options.shape || ParticleSystem.Shape.SQUARE;

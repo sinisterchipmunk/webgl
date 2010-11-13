@@ -1,4 +1,5 @@
 var mvMatrixStack = [];
+var pMatrixStack = [];
 var mvMatrix;
 var pMatrix;
 var currentlyPressedKeys = Object();
@@ -47,9 +48,26 @@ function mvPushMatrix(m) {
   }
 }
 
+function pPushMatrix(m) {
+  if (!pMatrix) throw new Error("No projection matrix!");
+  if (m) {
+    pMatrixStack.push(m.dup());
+    pMatrix = m.dup();
+  }
+  else
+    pMatrixStack.push(pMatrix.dup());
+}
+
+function pPopMatrix() {
+  if (pMatrixStack.length == 0)
+    throw new Error("Invalid pPopMatrix!");
+  pMatrix = pMatrixStack.pop();
+  return pMatrix;
+}
+
 function mvPopMatrix() {
   if (mvMatrixStack.length == 0) {
-    throw new Error("Invalid popMatrix!");
+    throw new Error("Invalid mvPopMatrix!");
   }
   mvMatrix = mvMatrixStack.pop();
   return mvMatrix;

@@ -9,7 +9,7 @@ class EngineTestsController < ApplicationController
   end
   
   def video_texture
-    dependencies << "objects/quad" << "engine/video_texture"
+    dependencies << "objects/quad" << "engine/video_texture" << "engine/canvas_texture"
   end
   
   def index
@@ -137,6 +137,10 @@ class EngineTestsController < ApplicationController
     
     world << ogro1
     world << ogro2
+  end
+  
+  def webgl_text
+    dependencies << "objects/quad" << "objects/cube" << "engine/canvas_texture"
   end
   
   private

@@ -27,5 +27,10 @@ var Quad = Class.create(Renderable, {
     textureCoords.push(0, 0);
     textureCoords.push(1, 1);
     textureCoords.push(1, 0);
+    
+    colors.push(1,1,1,1);
+    colors.push(1,1,1,1);
+    colors.push(1,1,1,1);
+    colors.push(1,1,1,1);
   }
 });

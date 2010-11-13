@@ -19,7 +19,9 @@ var reverse = true;
 
   world.particle_systems.add(new ParticleSystem({
     particle_count: 25,
+    dst_blend_mode: GL_ONE, // default is GL_ONE_MINUS_SRC_ALPHA
     shape: ParticleSystem.Shape.SQUARE,
+    
     texture: tex,
     
     after_initialize: function(vertices, colors, texcoords, normals, indices) {

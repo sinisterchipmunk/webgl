@@ -1,0 +1,76 @@
+<script>
+  <%content_for :init do%>
+    /* some setup */
+    world.context.enable(GL_BLEND);
+    world.context.blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    world.camera.moveTo(0, 0, 1);
+  
+    /* Example of 2D text which tracks updates-per-second */
+    var text2d = new Text("Hello, world! (2D)", {
+      type: "2d",
+      update: function(tc) {
+        this.frames = this.frames || 0;
+        this.timer = this.timer || 0;
+        
+        this.frames += 1;
+        this.timer += tc;
+        
+        if (this.timer > 1) {
+          this.text = "(2D) Updates per second: "+this.frames;
+          this.frames = this.timer = 0;
+          this.refresh();
+        }
+      }
+    });
+    world.addObject(text2d);
+  
+
+    /* Example of 3D text which rotates and sets up a custom background color */
+    var rotation = 0;
+    var text3d = new Text("Hello, world! (3D)", {
+      type: "3d",
+      background: function() {
+        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      },
+        
+      update: function(tc) {
+        rotation += tc * Math.PI/2;
+        var date = new Date();
+        var secs = date.getSeconds() + date.getMilliseconds() / 1000;
+        this.fillStyle = "hsl("+360*(secs/60)+",100%,50%)";
+        this.refresh();
+        this.orientation.setUp(Math.cos(rotation), Math.sin(rotation), 0);
+      }
+    });
+    world.addObject(text3d);
+  
+  
+    /* Example of explicitly texturing an object with text (though this probably won't happen often) */
+    var text = new Text("Textured", {
+      update: function(tc) {
+        this.counter = this.counter || 0;
+        this.counter += tc;
+        this.text = "Textured Object ("+parseInt(this.counter)+")";
+        this.fillStyle = "orange";
+        this.refresh();
+      },
+      background: function() {
+        this.context.fillRect(0,0,this.canvas.width,this.canvas.height);
+      }
+    });
+  
+    var object = new Cube([3, 1.5, 3]);
+    object.orientation.moveTo(-3, 2, -10);
+    object.mesh.addTexture(text.texture);
+    world.addObject(object);
+  <%end%>
+</script>
+
+<p>This test demonstrates several techniques for rendering text within WebGL. The simplest form is a 2D layer that is
+basically plastered on top of everything in the scene. Another demonstrated usage is as a 3D implementation which can be
+positioned directly within the 3D world. This implementation gives the 3D text all the attributes of any other 3D
+object: position, orientation, its own virtual camera and frustum, etc.</p>
+<p>The final demonstrated technique renders text to a texture and then binds that texture directly to another 3D object.
+This is probably one of the least common usages, but by no means does that make it any less valid. One reason for this
+approach might be to implement a scrolling marquee within the world without having to manage an object for the marquee
+and another object for the text itself.</p>

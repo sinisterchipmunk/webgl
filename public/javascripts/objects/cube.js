@@ -56,9 +56,10 @@ var Cube = (function() {
         function push(verti) {
           var i1 = verti*3, i2 = verti*3+1, i3 = verti*3+2;
           var vert = self.sides[i].transformVertex([qverts[i1], qverts[i2], qverts[i3]]);
+          
           vertices.push(vert[0], vert[1], vert[2]);
-          if (qcolor.length != 0) colors.push(qcolor[i1], qcolor[i2], qcolor[i3]);
-          if (qtex.length   != 0) texes. push(qtex  [i1], qtex  [i2], qtex  [i3]);
+          if (qcolor.length != 0) colors.push(qcolor[verti*4], qcolor[verti*4+1], qcolor[verti*4+2], qcolor[verti*4+3]);
+          if (qtex.length   != 0) texes. push(-qtex [verti*2], qtex[verti*2+1]);//, qtex  [i3]);
           /* TODO normals and per-face textures */
         }
         push(0); push(1); push(2); // tri1

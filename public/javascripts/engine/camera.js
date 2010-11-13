@@ -107,16 +107,16 @@ function Camera(options)
     if (gl.gl) gl = gl.gl;
     options = options || {};
     if (options.unit) {
-      options.left   = options.left   || -1;
-      options.top    = options.top    ||  1;
-      options.bottom = options.bottom || -1;
-      options.right  = options.right  ||  1;
+      options.left   = typeof(options.left)   != "undefined" ? options.left   : -1;
+      options.top    = typeof(options.top)    != "undefined" ? options.top    :  1;
+      options.bottom = typeof(options.bottom) != "undefined" ? options.bottom : -1;
+      options.right  = typeof(options.right)  != "undefined" ? options.right  :  1;
     }
     else {
-      options.left   = options.left   || 0;
-      options.right  = options.right  || gl.viewportWidth;
-      options.top    = options.top    || gl.viewportHeight;
-      options.bottom = options.bottom || 0;
+      options.left   = typeof(options.left)   != "undefined" ? options.left   : 0;
+      options.top    = typeof(options.top)    != "undefined" ? options.top    : gl.viewportHeight;
+      options.bottom = typeof(options.bottom) != "undefined" ? options.bottom : 0;
+      options.right  = typeof(options.right)  != "undefined" ? options.right  : gl.viewportWidth;
     }
     options.near = options.near || 0.1;
     options.far  = options.far  || 200;
