@@ -2,8 +2,26 @@
   #canvas { display: none; }
 <%end%>
 
+<h2>Demos</h2>
+<p>
+  A collection of tests and demos, the following serve collectively as (part of) my unit tests for this framework.
+  Some are also fun to play with, of course.
+</p>
 <ul>
 <%(controller.class.action_methods.sort - ['index']).each do |action|%>
   <li><%=link_to action, :action => action%></li>
 <%end%>
+</ul>
+
+<h2>Games</h2>
+<p>
+  These are full-featured (albeit simple) 3D games that you can play. They are built using the features demonstrated
+  above.
+</p>
+<ul>
+  <li>
+    <%=link_to "Space Combat", :controller => "shooter"%> - a simple space combat game. It'd be a lot more fun
+    with a joystick, but it's kind of addictive just the same. Oddly, it seems to perform best in Chrome, even though
+    it (and indeed, the entire framework) was designed to run in Firefox.
+  </li>
 </ul>

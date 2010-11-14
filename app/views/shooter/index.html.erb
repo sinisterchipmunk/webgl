@@ -1,0 +1,668 @@
+<script>
+  <%content_for :global do%>
+    /* Configuration stuff */
+    var PLASMA_BLAST = {
+      range: 150,
+      speed: 200,
+      proximity: 2,    // how far can it be from object's position to count as a hit? consider this a collision sphere radius.
+      damage: 10,     // how much damage is inflicted per blast per hit?
+      cooldown: 0.15,  // how many seconds cooldown between shots?
+      offset: 2        // how far below the camera should the blast start?
+    };
+  
+    var ENEMY_STARTING_LIFE = PLASMA_BLAST.damage; /* how much life does an enemy start with? */
+    var ENEMY_SPAWN = [25,25,25];                  /* enemies will spawn in a random position between (-r/2, r/2) */
+    var ENEMY_PATIENCE = 5;                        /* how many seconds will an enemy hunt before seeking a new target? */
+    var ENEMY_TARGET_PLAYER_CHANCE = 0.1;          /* how likely is the computer to ignore closer targets and focus on player? */
+    var ENGINE_TRAIL_LENGTH = 0.35;
+  
+    var LOADING = true;
+  
+    var STARS = {
+      count: Math.random() * 2000 + 1000,
+      max_distance: 10000,
+      min_distance: 1000
+    };
+    /* end config */
+  
+    /* global objects */
+    var STATS = {
+      shots_fired: 0,
+      hits: 0,
+      misses: 0,
+      kills: 0,
+      update: function() {
+        $("shots-fired").update(STATS.shots_fired);
+        $("hits").update(STATS.hits);
+        $("misses").update(STATS.misses);
+        $("kills").update(STATS.kills);
+        $("accuracy").update(parseInt(parseFloat(STATS.hits) / parseFloat(STATS.shots_fired) * 100.0)+"%");
+        
+        $("shooter_stats_shots_fired").value = (STATS.shots_fired);
+        $("shooter_stats_hits").value = (STATS.hits);
+        $("shooter_stats_misses").value = (STATS.misses);
+        $("shooter_stats_kills").value = (STATS.kills);
+        $("shooter_stats_accuracy").value = (parseFloat(STATS.hits) / parseFloat(STATS.shots_fired));
+      }
+    };
+  
+  
+    // for keeping track of input
+    var Player = {
+      cooldown: 0, // timer, see PLASMA_BLAST#cooldown
+      max_movement: 75,
+      max_rotation: Math.PI/4,
+      movement: [0,0,30],
+      rotation: [0,0,0],
+      position: [0,0,0],
+      control: true, // if false, player can't control his ship
+      life: 100,
+      max_life: 100,
+      inertia: 1.0/4.0,// if arrow keys are released, how many seconds from full rotate, until the camera stops rotating?
+                       // inertia has the inverse effect on player *starting* to rotate.
+      fire: function() {
+        STATS.shots_fired++;
+        STATS.update();
+
+        Player.cooldown = PLASMA_BLAST.cooldown;
+        var pos = Player.position;
+        var down = world.camera.getUp().negate();
+        pos = pos.plus(down.times(PLASMA_BLAST.offset));
+        var dir = world.camera.getView().times(PLASMA_BLAST.range).plus(Player.position).minus(pos).normalize();
+        
+        new PlasmaBlast(pos, dir, true);
+      },
+      takeDamage: function(amount) {
+        Player.life -= amount;
+        if (Player.life <= 0) {
+          // buffer position
+          Player.position = [Player.position[0], Player.position[1], Player.position[2]];
+          
+          // move camera
+          world.camera.move(-100);
+          
+          // start an explosion
+          var exp = particle_systems.create('explosion');
+          exp.orientation.setPosition(Player.position);
+          
+          // stop all controls
+          Player.control = false;
+          
+          // show hiscore screen
+          $("hiscores").style.display = "inline";
+        }
+        else {
+          lifeQuad.setSize(Player.life, 25);
+          if (Player.life <= 25) lifeQuad.mesh.setColor(1,0,0,1);
+          else if (Player.life <= 50) lifeQuad.mesh.setColor(1,1,0,1);
+          lifeQuad.invalidate();
+        }
+      }
+    };
+  
+    var title; // SPACE BATTLE and GAME OVER
+    var crosshair;
+    var orthoCam; // for drawing overlays like the crosshair
+    var texts = {};
+    var plasmaBlasts = [];
+    var enemies = [];
+    var lifeQuad; // the bar that represents the player's remaining life total
+    var instructions;
+    var loadingText; // "Loading, Please Wait..."
+  
+    var Enemy = Class.create(Renderable, {
+      initialize: function($super) {
+        $super();
+        this.id = (Enemy.id = Enemy.id || 1);
+        Enemy.id++;
+        enemies[this.id] = this;
+        
+        this.life = ENEMY_STARTING_LIFE;
+        this.turnRadius = Player.max_rotation;
+        this.maxSpeed = Player.max_movement;
+        this.minSpeed = this.maxSpeed / 10.0;
+        this.currentSpeed = Math.random() * (this.maxSpeed - this.minSpeed) + this.minSpeed;
+      },
+      draw: function(options) { if (Enemy.model) Enemy.model.render(options); },
+      die: function() {
+        enemies[this.id] = null;
+        world.removeObject(this);
+        this.update = null;
+      },
+      respawn: function() {
+        var spawn0 = ENEMY_SPAWN[0];
+        var spawn1 = ENEMY_SPAWN[1];
+        var spawn2 = ENEMY_SPAWN[2];
+        this.orientation.setPosition(Player.position[0] + (Math.random() * spawn0 - (spawn0 / 2.0)), 
+                                     Player.position[1] + (Math.random() * spawn1 - (spawn1 / 2.0)),
+                                     Player.position[2] + (Math.random() * spawn2 - (spawn2 / 2.0)));
+        this.target = null;
+      },
+      update: function(tc) {
+        if (LOADING) return;
+        var current = this.orientation.getView();
+        if (!this.target || this.findNewTarget <= 0) {
+          /* hunt a target - just choose the closest */
+          this.findNewTarget = ENEMY_PATIENCE;
+          var closest = null;
+          if (Player.control) closest = 1; // choose the player first, then see who's closer
+          if (!Player.control || Math.random() > ENEMY_TARGET_PLAYER_CHANCE) {
+            var closest_distance = Player.position.minus(current).magnitude();
+            for (var i = 0; i < enemies.length; i++) {
+              if (enemies[i]) {
+                var dist = enemies[i].orientation.getPosition().minus(current).magnitude();
+                if (!closest || dist < closest_distance) {
+                  closest = enemies[i];
+                  closest_distance = dist;
+                }
+              }
+            }
+          }
+          this.target = closest;
+          
+          /* minimum speed is the target's speed, give or take a little */
+          if (this.target == 1) this.minSpeed = Player.movement[2] - 10.0;
+          else this.minSpeed = this.target.currentSpeed - 10.0;
+        }
+        this.findNewTarget -= tc;
+                
+        /* TODO account for motion by leading the target! */
+        var target = (this.target == 1 ? Player.position : this.target.orientation.getPosition()).minus(this.orientation.getPosition()).normalize();
+        var variance = Math.random();
+        // just pick a random direction some of the time. We could call this "evasive maneuvers" if
+        // we wanted to be creative...
+        if (variance < 0.05) target = current.plus([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]);
+        var cross, parallel;
+        try { cross = current.cross(target); }
+        catch(e) { parallel = true; }
+        
+        if (!parallel) {
+          /* need to turn by some amount around the [cross] axis */
+          cross = cross.normalize();
+          var angle = target.angle(current);
+          var max = this.turnRadius * tc;
+          if (angle > max) angle = max;
+          else {
+            if (variance >= 0.05)
+              parallel = true; /* we can do it in this frame, we should fire too */
+          }
+          if (angle > Math.EPSILON)
+            this.orientation.setView(current.rotate(angle, cross));
+        }
+        
+        var distance = Player.position.minus(this.orientation.getPosition()).magnitude();
+        if (distance > PLASMA_BLAST.range - 10) /* we're too far, close in */
+          this.currentSpeed += tc;
+        else if (distance < PLASMA_BLAST.range / 2) /* we're too close, back off */
+          this.currentSpeed -= tc;
+        else if (this.currentSpeed != 0)
+          this.currentSpeed += (this.currentSpeed / -this.currentSpeed) * tc; // we're just right, move towards 0 speed
+        
+        if (this.currentSpeed < this.minSpeed) this.currentSpeed = this.minSpeed;
+        else if (this.currentSpeed > this.maxSpeed) this.currentSpeed = this.maxSpeed;
+        
+        if (this.currentSpeed != 0) this.orientation.move(this.currentSpeed*tc);
+        
+        if (parallel && distance <= PLASMA_BLAST.range) {
+          /* we're lined up, may as well fire */
+          if (this.cooldown > 0) {
+            this.cooldown -= tc;
+          } else {
+            this.cooldown = PLASMA_BLAST.cooldown;
+            var pos = current.times(PLASMA_BLAST.offset+1).plus(this.orientation.getPosition());
+            new PlasmaBlast(pos, current);
+          }
+        }
+      },
+      takeDamage: function(amount, playerDealt) {
+        this.life -= amount;
+        if (this.life <= 0)
+        {
+          if (playerDealt) STATS.kills++; 
+          /* create a nifty explosion */
+          var expl = particle_systems.create("explosion");
+          expl.orientation.setPosition(this.orientation.getPosition());
+          /* Remove this enemy */
+          this.respawn();
+        }
+      }
+    });
+    MD2.load("spaceship", function(obj) {
+      Enemy.model = obj;
+      Enemy.model.mesh.addTexture(Texture.instance("/images/textures/spaceship.png"));
+      Enemy.model.setScale(1.0/10.0);
+      LOADING = false;
+    });
+  
+    /*
+      the PlasmaBlast object, i.e. the object which a fighter "shoots"
+      - a PlasmaBlast has a direction and always moves at a constant speed in that direction.
+      - after a PlasmaBlast has moved PLASMA_BLAST.range units, it will dissipate.
+      - if a PlasmaBlast enters any ship's bounding sphere (effecting a collision), it will damage that ship.
+      
+      :note: a PlasmaBlast *should* be an extension of Renderable -- but it's short-lived, which Renderable never counted
+      on. I need to see why the system is holding onto references to Renderable after it's been killed before PlasmaBlast
+      can extend Renderable.
+      */
+    var PlasmaBlast = Class.create({
+      initialize: function(position, direction, playerOwned) {
+        this.playerOwned = !!playerOwned;
+        this.id = (PlasmaBlast.id = PlasmaBlast.id || 1);
+        PlasmaBlast.id++;
+        
+        this.orientation = new Camera();
+        this.orientation.setPosition(position);
+        if (direction) this.orientation.setView(direction);
+        this.distance = 0;
+        plasmaBlasts[this.id] = this;
+      },
+      render: function(options) {
+        mvPushMatrix();
+        mvMatrix = mvMatrix.x(this.getTransformationMatrix());
+        PlasmaBlast.model.render(options);
+        mvPopMatrix();
+      },
+      getTransformationMatrix: function() {
+        if (this.transformationMatrix) return this.transformationMatrix;
+      
+        /* TODO: refactor this - it's the same as applyObjectSpaceMatrixTransformations(). */
+        var matr = this.orientation.getMatrix().dup();
+        matr.elements[0][3] = matr.elements[1][3] = matr.elements[2][3] = 0;
+        this.transformationMatrix = Matrix.Translation($V(this.orientation.getPosition())).multiply(matr.transpose());
+        return this.transformationMatrix;
+      },
+      
+      die: function() {
+        /* TODO a pretty fade-out effect would be nice */
+        plasmaBlasts[this.id] = null;
+      },
+      
+//      draw: function(options) { options.shader = null; PlasmaBlast.model.render(options); },
+      update: function(tc) {
+        this.transformationMatrix = null;
+        var distance = tc * PLASMA_BLAST.speed;
+        this.distance += distance;
+        if (this.distance > PLASMA_BLAST.range) {
+          if (this.playerOwned) {
+            STATS.misses++;
+            STATS.update();
+          }
+          this.die();
+        }
+        else
+          this.orientation.move(distance);
+
+        /* TODO should a plasma blast "weaken" with range, approaching 0 damage as it approaches PLASMA_BLAST_RANGE? */
+        
+        /* if a plasma blast is very close to an enemy, consider it a hit */
+        var cur = this.orientation.getPosition();
+        /* check player */
+        if (Player.control && Player.position.minus(cur).magnitude() <= PLASMA_BLAST.proximity) {
+          Player.takeDamage(PLASMA_BLAST.damage);
+          this.die();
+        }
+        else
+        {
+          /* now check enemies */
+          for (var i = 0; i < enemies.length; i++)
+          {
+            if (enemies[i])
+            {
+              var pos = enemies[i].orientation.getPosition();
+            
+              if (pos.minus(cur).magnitude() <= PLASMA_BLAST.proximity) {
+                enemies[i].takeDamage(PLASMA_BLAST.damage, this.playerOwned);
+                if (this.playerOwned) STATS.hits++;
+                this.die();
+              }
+            }
+          }
+        }
+      }
+    });
+  
+    /* A shared 3D model. All PlasmaBlasts render one of these. */
+    PlasmaBlast.model = new Renderable({
+      init: function(verts, colors, texes, normals, indices) {
+        var cube = new Cube([0.25,0.25,4]);
+        cube.init(verts, colors, texes, normals, indices);
+      },
+      update: null
+    });
+
+    /* end global objects */
+  
+    function setScores(response) {
+      $("hiscores").update(response.responseText);
+    }
+  
+    function updateKeyboardInput(tc)
+    {
+      var movement_speed = Player.max_movement; // in GL units per second
+      var rotation_speed = Player.max_rotation / Player.inertia;
+      var strafing_speed = 1.0;
+      
+      movement_speed *= tc; // we multiply by time passed. For any real world application we'd not rely on
+      rotation_speed *= tc; // setInterval and we'd calculate actual time elapsed instead.
+      strafing_speed *= tc;
+      
+      
+      if (currentlyPressedKeys[32] && !Player.control && Player.life > 0) {
+        /* starting a new game! */
+        Player.control = true;
+        STATS.update();
+        return;
+      }
+      
+      if (!Player.control) return;
+
+      var mag;
+      if (currentlyPressedKeys[32] && Player.cooldown <= 0) Player.fire();
+      if (currentlyPressedKeys[37]) Player.rotation[1] -= rotation_speed; // arrow left
+      else if (currentlyPressedKeys[39]) Player.rotation[1] += rotation_speed; // arrow right
+      else {
+        if (Player.rotation[1] != 0) {//} && !currentlyPressedKeys[37] && !currentlyPressedKeys[39]) {
+          mag = Math.abs(Player.rotation[1]);
+          Player.rotation[1] += -(mag / Player.rotation[1]) * mag * tc / Player.inertia;
+        }
+      }
+      
+      if (currentlyPressedKeys[38]) Player.rotation[0] += rotation_speed; // arrow up
+      else if (currentlyPressedKeys[40]) Player.rotation[0] -= rotation_speed; // arrow down
+      else {
+        if (Player.rotation[0] != 0) {//} && !currentlyPressedKeys[38] && !currentlyPressedKeys[40]) {
+          mag = Math.abs(Player.rotation[0]);
+          Player.rotation[0] += -(mag / Player.rotation[0]) * mag * tc / Player.inertia;
+        }
+      }
+      
+      if (currentlyPressedKeys[87]) Player.movement[2] += movement_speed; // W
+      if (currentlyPressedKeys[83]) Player.movement[2] -= movement_speed; // S
+//      if (currentlyPressedKeys[65]) Player.movement[0] -= 1; // A
+//      if (currentlyPressedKeys[68]) Player.movement[0] += 1; // D
+      
+      if (Player.movement[0] > Player.max_movement) Player.movement[0] = Player.max_movement;
+      if (Player.movement[0] <-Player.max_movement) Player.movement[0] =-Player.max_movement;
+      if (Player.movement[2] > Player.max_movement) Player.movement[2] = Player.max_movement;
+      if (Player.movement[2] <-Player.max_movement) Player.movement[2] =-Player.max_movement;
+
+      if (Player.rotation[0] > Player.max_rotation) Player.rotation[0] = Player.max_rotation;
+      if (Player.rotation[0] <-Player.max_rotation) Player.rotation[0] =-Player.max_rotation;
+      if (Player.rotation[1] > Player.max_rotation) Player.rotation[1] = Player.max_rotation;
+      if (Player.rotation[1] <-Player.max_rotation) Player.rotation[1] =-Player.max_rotation;
+      
+    }
+  
+    var lastUpdate = null;
+    function updateScene() {
+      var tc = 0;
+      var time = new Date();
+      if (lastUpdate) tc = (time - lastUpdate) / 1000.0;
+      lastUpdate = time;
+      
+      updateKeyboardInput(tc);
+    
+      if (Player.control) {
+        if (Player.cooldown > 0) Player.cooldown -= tc;
+
+        world.camera.move(Player.movement[2] * tc);
+        world.camera.strafe(Player.movement[0] * tc);
+        world.camera.rotateView(Player.rotation.times(tc));
+        Player.position = world.camera.getPosition();
+        
+        crosshair.update(tc);
+      }
+    
+      for (var i = 0; i < plasmaBlasts.length; i++)
+        if (plasmaBlasts[i])
+          plasmaBlasts[i].update(tc);
+    }
+  <%end%>
+  
+  <%content_for :init do%>
+    context = new WebGLContext('main', <%=shaders.to_json%>);
+  
+    orthoCam = new Camera();
+    var w = context.gl.viewportWidth / 2.0, h = context.gl.viewportHeight / 2.0;
+    orthoCam.ortho(context.gl, {left:-w,right:w,top:-h,bottom:h});
+  
+    /* TODO make this stuff not necessary */
+    gl = context.gl;
+    world = context.world = <%=world.to_js.html_safe%>;
+    world.camera.perspective(context.gl, {far:20000});
+    context.world.context = context;
+    world.camera.moveTo(0,0,10);
+  
+    world.particle_systems.add(new ParticleSystem({
+      particle_count: 100,
+      shape: ParticleSystem.Shape.SQUARE,
+      texture: "/images/textures/particle.png",
+      
+      revive_particle: function(particle) {
+        var index = particle.index % enemies.length;
+        if (enemies[index]) {
+          var pos = enemies[index].orientation.getPosition();
+          particle.position = [pos[0]+Math.random()-0.5, pos[1]+Math.random()-0.5, pos[2]+Math.random()-0.5];
+          particle.size = 0.25;
+          particle.color = [1,Math.random(), 0, 0.5];
+          particle.energy = Math.random()*ENGINE_TRAIL_LENGTH;
+        }
+      },
+      
+      update_particle: function(particle, tc) {
+        particle.energy -= tc;
+      }
+    }));
+    
+    title = new Text("SPACE\nBATTLE", {type:"3d", size:120,update: function(tc) {
+      if (!Player.control && Player.life <= 0 && this.text != "GAME\nOVER") {
+        this.text = "GAME\nOVER";
+        this.refresh();
+      }
+    }});
+    title.mesh.setColor(1,1,0,1);
+    instructions = new Text("W and S to speed up and slow down\nArrow keys to steer\nSpacebar to fire\nPress spacebar to begin!",
+                            {type: "2d",x:-250,y:-100});
+    instructions.mesh.setColor(1,1,0,1);
+    loadingText = new Text("Loading, Please Wait...", {type:"2d",x:-300,y:-300});
+    loadingText.mesh.setColor(1,1,0,1);
+    
+    lifeQuad = new Quad(100, 20);
+    lifeQuad.mesh.setColor(0,0,1,1);
+    lifeQuad.orientation.moveTo(350, -290, -1);
+    
+    PlasmaBlast.model.mesh.addTexture(new Texture("/images/textures/particle.png"));
+    PlasmaBlast.model.mesh.setColor([0,1,0.25,1]);
+  
+    texts.speedTextZ = new Text("Velocity: 0",    {type:"2d",y:-580,update:function(tc) {
+      this.text = "Velocity: "+parseInt(Player.movement[2]);
+      this.refresh();
+    }});
+    texts.shields = new Text("Shields: ", {type:"2d", y:-580,x:-625});
+  
+    crosshair = new Renderable({
+      init: function(vertices, colors) {
+        this.draw_mode = GL_LINES;
+        var size = this.size = 10;
+        vertices.push(-size, -size, 0);
+        vertices.push(-size,  size, 0);
+
+        vertices.push(-size,  size, 0);
+        vertices.push( size,  size, 0);
+
+        vertices.push( size,  size, 0);
+        vertices.push( size, -size, 0);
+
+        vertices.push( size, -size, 0);
+        vertices.push(-size, -size, 0);
+        
+        vertices.push(0, -(size+5), 0);
+        vertices.push(0,  -5, 0);
+        vertices.push(0,  (size+5), 0);
+        vertices.push(0,   5, 0);
+
+        vertices.push(-(size+5), 0, 0);
+        vertices.push( -5, 0, 0);
+        vertices.push( (size+5), 0, 0);
+        vertices.push( 5, 0, 0);
+        this.locked = true;
+      },
+      update: function(tc) {
+        if (!this.size) return;
+        
+        /* TODO lead the target when moving! */
+//        var objects = world.pickRect(world.context.gl.viewportWidth / 2.0 - (this.size/2), world.context.gl.viewportHeight / 2.0 + (this.size/2), this.size, this.size);
+//        if (objects) {
+//          // we have a lock, find out what on (it's the closest object found)
+//          var nearest = objects[0], nearest_dist = objects[0].orientation.getPosition().minus(world.camera.getPosition()).magnitude();
+//          for (var i = 1; i < objects.length; i++) {
+//            var n = objects[i].orientation.getPosition().minus(world.camera.getPosition()).magnitude();
+//            if (n < nearest_dist) {
+//              nearest_dist = n;
+//              nearest = objects[i];
+//            }
+//          }
+//          
+//          this.mesh.setColor([0,1,0,1]);
+//          this.locked = true;
+//        } else {
+//          if (this.locked)
+//            this.mesh.setColor([0.75,0.75,0.75,1]);
+//          this.locked = false;
+//        }
+      }
+    });
+    crosshair.orientation.setPosition(0,0,-1);
+  
+//    Enemy.model.mesh.addTexture(Texture.instance("/images/textures/spaceship.png"));
+
+//    setInterval(updateKeyboardInput, 30);
+    setInterval(updateScene, 15);
+  
+    for (var i in texts) {
+      world.addObject(texts[i]);
+    }
+  
+    for (var i = 0; i < 10; i++) {
+      var x = Math.cos(Math.PI*2/10*i) * 100;
+      var z = Math.sin(Math.PI*2/10*i) * 100;
+      var enemy = new Enemy();
+      enemy.orientation.setPosition([x, 0, z]);
+      /* FIXME WORKAROUND this shouldn't be necessary */
+      enemy.shader = 'per_fragment_lighting_with_texture';
+      enemy.mesh.addTexture(Texture.instance("/images/textures/spaceship.png"));
+      world.addObject(enemy);
+    }
+  
+    /* set up lighting */
+    var direction = [1,-0.75,-1];
+    var dircolor = [1,0.9,0.75];
+    var ambient = [0.4,0.4,0.4];
+    var pointLocation = [-2, 0, 0];
+    var pointColor = [0, 0, 0];
+    
+    var shader = context.shaders['per_fragment_lighting_with_texture'];
+    shader.uniform('uAmbientColor', 'uniform3fv').value = function() { return new Float32Array(ambient); };
+    shader.uniform('uLightingDirection', 'uniform3fv').value = function() { return new Float32Array(direction.normalize().times(-1)); };
+    shader.uniform('uDirectionalColor', 'uniform3fv').value = function() { return new Float32Array(dircolor); };
+    shader.uniform('uUseLighting', 'uniform1i').value = function() { return true; };
+    shader.uniform('uPointLightColor', 'uniform3fv').value = function() { return new Float32Array(pointColor); };
+    shader.uniform('uPointLightLocation', 'uniform3fv').value = function() { return new Float32Array(pointLocation); };
+  
+  
+    /* generate stars */
+    world.particle_systems.add(new ParticleSystem({
+      particle_count: STARS.count,
+      shape: ParticleSystem.Shape.POINT,
+      
+      revive_particle: function(particle) {
+        particle.energy = 1;
+        var color = Math.random() * 0.5 + 0.5;
+        particle.color = [color,color,color,1];
+        var normal = [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5].normalize();
+        particle.position = normal.times((Math.random() * (STARS.max_distance - STARS.min_distance)) + STARS.min_distance);
+      },
+      
+      update_particle: null
+    }));
+  
+    Player.control = false;
+  <%end%>
+        
+  <%content_for :render do%>
+    context.enable(GL_BLEND);
+    context.blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    if (LOADING)
+    {
+      world.context.disable(GL_DEPTH_TEST);
+      orthoCam.look(context.gl);
+      loadingText.render({context:context});
+      world.context.enable(GL_DEPTH_TEST);
+    }
+    else
+    {
+      world.render();
+      world.camera.look(world.context.gl);
+
+      for (var i = 0; i < plasmaBlasts.length; i++)
+        if (plasmaBlasts[i])
+          plasmaBlasts[i].render({context:world.context});
+
+      if (!Player.control) {
+//      orthoCam.look(context.gl, {unit:true});
+        loadIdentity();
+        world.context.disable(GL_DEPTH_TEST);
+        mvTranslate(0,0,-1);
+        mvRotate(-60, 1, 0, 0);
+        title.draw({context:world.context,shader:title.getDefaultShader()});
+  
+        orthoCam.look(context.gl);
+        if (Player.life > 0)
+          instructions.render({context:context});
+        world.context.enable(GL_DEPTH_TEST);
+      }
+  
+      if (Player.control) {
+        // crosshair and other overlay items
+        orthoCam.look(context.gl);
+        world.context.disable(GL_DEPTH_TEST);
+        crosshair.render({context:world.context});
+        mvTranslate(-(Player.max_life - Player.life) / 2.0, 0, 0);
+        lifeQuad.render({context:world.context});
+        world.context.enable(GL_DEPTH_TEST);
+      }
+    }
+  <%end%>
+</script>
+
+<%content_for :head do%>
+  <style>
+  #main { float:left; margin-right:1em; }
+  #hiscores { display:none; }
+  </style>
+<%end%>
+
+<canvas id="main" width="800" height="600"></canvas>
+
+<p>Shots Fired: <span id='shots-fired'>0</span></p>
+<p>Hits: <span id='hits'>0</span></p>
+<p>Misses: <span id='misses'>0</span></p>
+<p>Kills: <span id='kills'>0</span></p>
+<p>Accuracy: <span id='accuracy'>100%</span></p>
+
+<div id="hiscores">
+  <%=form_for @hiscore, :url => { :action => "create" }, :remote => true, :id => "hiscores" do |f|%>
+    <%=f.hidden_field :shots_fired%>
+    <%=f.hidden_field :hits%>
+    <%=f.hidden_field :misses%>
+    <%=f.hidden_field :kills%>
+    <%=f.hidden_field :accuracy%>
+    <p>Submit Your Score!</p>
+    <p>
+      <%=f.label :name%><br/>
+      <%=f.text_field :name, :onkeyup => "$('submit').disabled = false;"%>
+    </p>
+    <input type="submit" id="submit" value="Submit" disabled />
+  <%end%>
+</div>

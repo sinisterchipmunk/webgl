@@ -172,7 +172,12 @@ var Renderable = function() {
     dispose: function(context) {
       var self = this;
       logger.attempt("Renderable#dispose", function() {
-        if (!context) throw new Error("No context given!");
+        if (!context) {
+          // implicitly dispose in all contexts
+          for (var cid in self.pickShader)
+            self.dispose(self.pickShader[cid].context);
+          return;//throw new Error("No context given!");
+        }
         if (self.pickShader && self.pickShader[context.id]) { self.pickShader[context.id].dispose(); self.pickShader[context.id] = false; }
         if (self.mesh) self.mesh.dispose(context);
       });
@@ -202,24 +207,26 @@ var Renderable = function() {
     
     startUpdating: function() {
       var self = this;
-      if (self.update && !self.updateInterval)
-      {
-        var previousUpdate = new Date();
-        function update() {
-          if (self.update)
-          {
-            logger.attempt("update", function() {
-              var currentTime = new Date();
-              var timechange = currentTime - previousUpdate;
-              previousUpdate = currentTime;
-              self.update(timechange / 1000);
-            });
+      logger.attempt("Renderable#startUpdating", function() {
+        if (self.update && !self.updateInterval)
+        {
+          var previousUpdate = new Date();
+          function update() {
+            if (self.update)
+            {
+              logger.attempt("update", function() {
+                var currentTime = new Date();
+                var timechange = currentTime - previousUpdate;
+                previousUpdate = currentTime;
+                self.update(timechange / 1000);
+              });
+            }
+            self.updateInterval = setTimeout(update, Renderable.update_interval);
           }
+      
           self.updateInterval = setTimeout(update, Renderable.update_interval);
         }
-      
-        self.updateInterval = setTimeout(update, Renderable.update_interval);
-      }
+      });
     },
     
     rebuildAll: function() { this.invalidate(); }

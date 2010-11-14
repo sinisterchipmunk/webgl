@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rails/WebGL Tests</title>
+  <%= stylesheet_link_tag :all %>
+  <%= javascript_include_tag :defaults %>
+  <%= csrf_meta_tag %>
+  <%=yield :head%>
+  <%= javascript_include_tag :webgl %>
+  <%dependencies.each do |fi| %>
+    <%=javascript_include_tag fi%>
+  <%end%>
+  
+  <script type="text/javascript">
+    // this is used to disable context.checkError(), which is slow.
+    // it may be worth noting that context.checkError() is particularly
+    // slow on Chrome; FF gets a much better framerate (40+).
+    var RELEASE = true;
+    var context = null;
+    var gl = null;
+    var frame_count = 0;
+    var world;
+    var particle_systems = <%=particle_systems.to_json%>;
+    
+    particle_systems.create = function(name, _world) {
+      if (!_world) _world = world;
+      if (particle_systems[name])
+      {
+        var ps = new ParticleSystem(particle_systems[name]);
+        _world.particle_systems.add(ps);
+        return ps;
+      }
+      else
+        throw new Error("Particle system not found: "+name);
+    };
+    
+    particle_systems.clear = function(_world) {
+      if (!_world) _world = world;
+      _world.particle_systems.clear();
+    };
+    
+    <%=yield :global%>
+    
+    function drawScene() {
+      frame_count += 1;
+
+      <%=render_content = yield :render%>
+      context.checkError();
+    }
+  
+    function webGLStart() {
+      logger.attempt("webGLStart", function() {
+        <%=yield :init%>
+        if (!context) throw new Error("No context!");
+        
+        <%if !render_content.blank?%>
+          context.render = drawScene;
+        <%end%>
+
+        logger.level = Logger.DEBUG;
+        if ($('logger')) $('logger').update(logger);
+        
+        initializationComplete();
+        
+        setInterval(calcFramerate, 1000);
+      });
+    }
+    
+    function calcFramerate() {
+      document.getElementById('framerate').innerHTML = "FPS: "+(world.framerate || frame_count);
+      frame_count = 0;
+    }
+  </script>
+  
+  <style>
+    <%=yield :style%>
+  </style>
+</head>
+  <body onload="webGLStart();">
+    <div id="framerate" style="float:left;width:100px;clear:both;">Calculating...</div>
+      <div style="float:left;width:100px;"><a href="#" onclick='$("logger").toggle();return false;'>See Log</a></div>
+      <div style="float:left;width:125px;"><%=link_to "Back to Index", :controller => "engine_tests", :action => 'index'%></div>
+      <div style="clear:right;"><%=link_to "Thoughts in Computation", 'http://thoughtsincomputation.com'%></div>
+      <div style='clear:both;white-space:pre;font-family:monospace;height:10em;overflow:auto;display:none;' id="logger">
+    </div>
+
+    <%=yield%>
+  </body>
+</html>

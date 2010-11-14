@@ -40,14 +40,16 @@ World.prototype = {
   
   render: function(mode) {
     mvPushMatrix();
-      this.frame_count++;
-      var time = new Date();
-      if (!this.render_time) this.render_time = time;
-      if (this.render_time <= (time - 1000))
-      {
-        this.framerate = this.frame_count;
-        this.render_time = time;
-        this.frame_count = 0;
+      if (mode != RENDER_PICK) {
+        this.frame_count++;
+        var time = new Date();
+        if (!this.render_time) this.render_time = time;
+        if (this.render_time <= (time - 1000))
+        {
+          this.framerate = this.frame_count;
+          this.render_time = time;
+          this.frame_count = 0;
+        }
       }
       
       this.camera.look(this.context.gl);
@@ -89,6 +91,28 @@ World.prototype = {
   },
   
   pickIndex: function(x, y) {
+    var r = this.pickRectIndices(x, y, 1, 1);
+    if (r) return r[0];
+  },
+  
+  pick: function(x, y) {
+    var index = this.pickIndex(x, y);
+    
+    if (index != null)
+      return this.objects[index];
+    return null;
+  },
+  
+  pickRect: function(x, y, w, h) {
+    var indices = this.pickRectIndices(x, y, w, h);
+    if (indices) {
+      for (var i = 0; i < indices.length; i++)
+        indices[i] = this.objects[indices[i]];
+    }
+    return indices;
+  },
+  
+  pickRectIndices: function(x, y, w, h) {
     // we want to read the pixel at x, y -- so we really need a rectangle from x-1,y-1 with witdth and height equal to 1
     x -= 1;
     y -= 1;
@@ -112,26 +136,33 @@ World.prototype = {
     catch(e) { }               //x-2, y+2
     if (!data) {
     */
-      data = new Uint8Array(4); // w * h * 4
-      self.context.readPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+      data = new Uint8Array(w*h*4); // w * h * 4
+      self.context.readPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, data);
     //}
     if(data.data) data=data.data;
     
-    var index = null;
-    if (data[2] > 0) index = decodeFromColor(data); // check the 'blue' key (2)
+    var indices = null, index, i;
+    for (i = 2; i < data.length; i += 4) {
+      if (data[i] > 0) // check the 'blue' key (2)
+      {
+        index = decodeFromColor(data[i-2], data[i-1], data[i], data[i+1]);
+        if (index)
+        {
+          if (!indices) indices = {};
+          indices[index] = index;
+        }
+      }
+    }
     self.context.bindFramebuffer(GL_FRAMEBUFFER, null);
     self.context.viewport(0,0,self.context.gl.viewportWidth,self.context.gl.viewportHeight);
 
     self.context.enable(GL_BLEND);
     
-    return index;
-  },
-  
-  pick: function(x, y) {
-    var index = this.pickIndex(x, y);
-    
-    if (index != null)
-      return this.objects[index];
-    return null;
+    if (indices) {
+      var ind = [];
+      for (i in indices) ind.push(indices[i]);
+      return ind;
+    }
+    return indices;
   }
 };

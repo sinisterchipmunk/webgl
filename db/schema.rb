@@ -10,7 +10,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20101104164749) do
+ActiveRecord::Schema.define(:version => 20101114083257) do
 
   create_table "actors", :force => true do |t|
     t.string  "name"
@@ -55,6 +55,17 @@ ActiveRecord::Schema.define(:version => 20101104164749) do
     t.string   "perishable_token"
     t.integer  "authenticatable_id"
     t.string   "authenticatable_type"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "shooter_stats", :force => true do |t|
+    t.integer  "shots_fired"
+    t.integer  "hits"
+    t.integer  "misses"
+    t.integer  "kills"
+    t.decimal  "accuracy"
+    t.string   "name"
     t.datetime "created_at"
     t.datetime "updated_at"
   end

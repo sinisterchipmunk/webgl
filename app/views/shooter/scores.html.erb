@@ -1,0 +1,20 @@
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Kills</th>
+    <th>Accuracy</th>
+    <th>Shots Fired</th>
+    <th>Hits</th>
+    <th>Misses</th>
+  </tr>
+  <%@scores.each do |score|%>
+    <tr>
+      <td><%=score.name%></td>
+      <td><%=score.kills%></td>
+      <td><%=(score.accuracy * 100.0).to_i%>%</td>
+      <td><%=score.shots_fired%></td>
+      <td><%=score.hits%></td>
+      <td><%=score.misses%></td>
+    </tr>
+  <%end%>
+</table>

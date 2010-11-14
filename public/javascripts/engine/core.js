@@ -252,8 +252,8 @@ function encodeToColor(number) {
   return [r, g, 255, 255];
 }
 
-function decodeFromColor(color) {
-  var r = color[0], g = color[1];
+function decodeFromColor(r, g, b, a) {
+  if (typeof(g) == "undefined") { g = r[1]; b = r[2]; a = r[3]; r = r[0]; }
   // b and a are reserved, see #encodeToColor
   
   var number = (g * 256) + r;

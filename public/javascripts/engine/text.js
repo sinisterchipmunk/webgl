@@ -155,14 +155,21 @@ var Text = Class.create(Renderable, {
     var text = this.text;
     var ctx  = this.context;
     var left = this.canvas.width / 2;
-    var top  = this.canvas.height/ 2;
-    ctx.strokeText(text, left, top);
-    ctx.fillText(text, left, top);
+    var top = parseFloat(this.size+this.lineWidth*2) / 2.0;
+//    var top  = this.canvas.height/ 2;
+    var lines = this.text.split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      text = lines[i];
+      ctx.strokeText(text, left, top);
+      ctx.fillText(text, left, top);
+      top += parseFloat(this.size+this.lineWidth*2);
+    }
   },
   
   checkSize: function() {
     var text = this.text;
     var ctx  = this.context;
+    var lines = text.split("\n");
         
     ctx.fillStyle = this.fillStyle;
     ctx.lineWidth = this.lineWidth;
@@ -171,11 +178,16 @@ var Text = Class.create(Renderable, {
     ctx.textAlign = this.textAlign;
     ctx.textBaseline = this.textBaseline;
 
-    var width = parseFloat(ctx.measureText(text).width) + this.lineWidth*2;
+    var width = 0;
+    for (var i = 0; i < lines.length; i++)
+    {
+      var w = parseFloat(ctx.measureText(lines[i]).width) + this.lineWidth*2;
+      if (w > width) width = w;
+    }
     if (width != parseFloat(this.canvas.width))
     {
       var original_width = this.canvas.width, original_height = this.canvas.height;
-      var height = parseFloat(this.size+this.lineWidth*2);
+      var height = parseFloat(this.size+this.lineWidth*2) * lines.length;
       var c2 = document.createElement("canvas");
       
       c2.width  = width;

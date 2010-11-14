@@ -129,10 +129,15 @@ var ParticleSystem = (function() {
       }
     },
     
+    update_particle: function(particle, tc) { this.update_particle = null; },
+    
     update: function(timechange)
     { /* TODO refactor this */
       /* don't update if #init hasn't completed */
       if (!this.untransformed_vertices) return false;
+      
+      /* don't update if there's no update method, because nothing could have changed */
+      if (!this.update_particle) return false;
       
       var deadCount = 0, j;
       var vertexBuf = this.mesh.getVertexBuffer();
@@ -157,7 +162,7 @@ var ParticleSystem = (function() {
 //        var forceColor = !particle.previous_color;
         particle.index = i;
         this.update_previous_values(particle);
-        this.update_particle.call(this, particle, timechange);
+        if (this.update_particle) this.update_particle.call(this, particle, timechange);
         
         var sizex, sizey, sizez;
         if (typeof(particle.size) == "number") sizex = sizey = sizez = particle.size;

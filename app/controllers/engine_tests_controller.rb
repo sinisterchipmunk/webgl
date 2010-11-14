@@ -1,15 +1,12 @@
 class EngineTestsController < ApplicationController
   layout :choose_layout
-  helper_method :dependencies, :shaders, :objects, :world, :particle_systems
-  before_filter :add_all_shaders
-  before_filter :add_particle_systems
+  include WebGL
   
   def octree
-    dependencies << "engine/heightmap" << "culling/octree" << "objects/sphere" << "objects/cube" << "objects/quad"
+    dependencies << "engine/heightmap" << "culling/octree" << "objects/sphere" << "objects/cube"
   end
   
   def video_texture
-    dependencies << "objects/quad" << "engine/video_texture" << "engine/canvas_texture"
   end
   
   def index
@@ -24,7 +21,6 @@ class EngineTestsController < ApplicationController
   end
 
   def texture
-    dependencies << 'objects/quad'
   end
 
   def camera
@@ -33,7 +29,7 @@ class EngineTestsController < ApplicationController
   end
   
   def interface
-    dependencies << 'engine/heightmap' << "objects/md2" << "objects/quad" << "objects/line" << "models/actor" <<
+    dependencies << 'engine/heightmap' << "objects/md2" << "objects/line" << "models/actor" <<
             "models/creature" << "models/ai" << "engine/animation" << "objects/axis"
     
     scene = HeightMap.new("/images/height.png",
@@ -52,11 +48,11 @@ class EngineTestsController < ApplicationController
   end
   
   def picking
-    dependencies << 'tests/engine/world' << 'objects/quad' << "objects/sphere"
+    dependencies << 'tests/engine/world' << "objects/sphere"
   end
   
   def dynamic_shader
-    dependencies << "objects/quad" << "tests/engine/shader"
+    dependencies << "tests/engine/shader"
   end
 
   def core
@@ -64,23 +60,23 @@ class EngineTestsController < ApplicationController
   end
   
   def lighting
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world'
+    dependencies << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world'
   end
   
   def ruby_layer
     #objects << WebGL::Quad.new(1, 1)
     objects << WebGL::Sphere.new(0.5)
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+    dependencies << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
             "objects/renderable"
   end
   
   def renderable
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+    dependencies << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
             "objects/renderable" << "tests/engine/renderable"
   end
   
   def particles
-    dependencies << 'objects/quad' << 'objects/sphere' << 'objects/json3d'
+    dependencies << 'objects/sphere' << 'objects/json3d'
 #    << 'objects/particle'
     dependencies << "systems/particle_generator"
     world.camera.position = [0,0,10]
@@ -88,12 +84,12 @@ class EngineTestsController < ApplicationController
   end
   
   def multi_canvas
-    dependencies << 'objects/quad' << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
+    dependencies << "objects/sphere" << "tests/engine/lighting" << 'tests/engine/world' <<
             "objects/renderable"
   end
   
   def orientation
-    dependencies << "objects/quad" << "objects/axis"
+    dependencies << "objects/axis"
     
     @quad = WebGL::Quad.new(3,3)
 
@@ -114,7 +110,7 @@ class EngineTestsController < ApplicationController
   end
   
   def frustum
-    dependencies << "objects/quad" << "objects/cube" << "objects/sphere" << "objects/point"
+    dependencies << "objects/cube" << "objects/sphere" << "objects/point"
   end
   
   def creatures
@@ -140,65 +136,6 @@ class EngineTestsController < ApplicationController
   end
   
   def webgl_text
-    dependencies << "objects/quad" << "objects/cube" << "engine/canvas_texture"
-  end
-  
-  private
-  def world
-    @world ||= WebGL::World.new
-  end
-  
-  def choose_layout
-    params[:action] == "animation_editor" ? nil : "engine_tests"
-  end
-  
-  def dependencies
-    @dependencies ||= []
-  end
-  
-  def objects
-    @objects ||= []
-  end
-  
-  def shaders
-    @shaders ||= begin
-      hash = {}
-      def hash.to_json(*a)
-        ("{"+collect { |(key, shader)| key.to_json + ": "+shader.to_json }.join(",")+"}").html_safe
-      end
-      hash
-    end
-  end
-  
-  def particle_systems
-    @particle_systems ||= begin
-      hash = {}
-      def hash.to_json(*a)
-        ("{"+collect { |(key, particle_system)| key.to_json + ": "+particle_system.to_json }.join(",")+"}").html_safe
-      end
-      hash
-    end
-  end
-  
-  def add_all_shaders
-    ActiveSupport::Dependencies.autoload_paths.each do |path|
-      Dir[File.join(path, "shaders/*")].each do |path|
-        if File.directory?(path)
-          name = path.sub(/.*\/shaders\/([^\/]+)\/?/, '\1')
-          shaders[name] = WebGL::Shader.new(name)
-        end
-      end
-    end
-  end
-  
-  def add_particle_systems
-    ActiveSupport::Dependencies.autoload_paths.each do |path|
-      Dir[File.join(path, "particle_systems/*.js")].each do |path|
-        if File.file?(path)
-          name = path.sub(/.*\/particle_systems\/([^\/]+)\.js/, '\1')
-          particle_systems[name] = WebGL::ParticleSystem.new(name)
-        end
-      end
-    end
+    dependencies << "objects/cube"
   end
 end

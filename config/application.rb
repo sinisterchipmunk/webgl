@@ -71,4 +71,7 @@ ActionView::Helpers::AssetTagHelper.register_javascript_expansion :webgl => %w(
   engine/mesh   
   engine/text
   culling/octree
+  objects/quad
+  engine/video_texture
+  engine/canvas_texture
 )
