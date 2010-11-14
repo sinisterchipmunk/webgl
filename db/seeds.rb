@@ -10,11 +10,13 @@ Creature.transaction do
   ogro_texture    = Texture.create(:path => "/images/textures/ogro.png");
   laalaa_texture  = Texture.create(:path => "/images/textures/laalaa.png");
   pknight_texture = Texture.create(:path => "/images/textures/pknight.png");
+  spaceship_texture = Texture.create(:path => "/images/textures/spaceship.png");
   
-  crafty_model  = Model.create(:name => "crafty",  :textures => [crafty_texture])
-  ogro_model    = Model.create(:name => "ogro",    :textures => [ogro_texture])
-  laalaa_model  = Model.create(:name => "laalaa",  :textures => [laalaa_texture])
-  pknight_model = Model.create(:name => "pknight", :textures => [pknight_texture])
+  crafty_model    = Model.create(:name => "crafty",  :textures => [crafty_texture])
+  ogro_model      = Model.create(:name => "ogro",    :textures => [ogro_texture])
+  laalaa_model    = Model.create(:name => "laalaa",  :textures => [laalaa_texture])
+  pknight_model   = Model.create(:name => "pknight", :textures => [pknight_texture])
+  spaceship_model = Model.create(:name => "spaceship", :textures => [spaceship_texture])
   
   base_ai = AI.create(:name => "Base Creature")
   
