@@ -429,7 +429,8 @@
         if (Player.target == null) Player.target = -1;
         Player.target++;
         Player.target = Player.target % enemies.length;
-        while (!enemies[Player.target]) { Player.target++; Player.target = Player.target % enemies.length; }
+        var counter = 0;
+        while (!enemies[Player.target] && counter < enemies.length) { counter++; Player.target++; Player.target = Player.target % enemies.length; }
       }
       if (currentlyPressedKeys[89]) { // "Y"
         /* we don't want to repeat this event. TODO find a better way. */
@@ -437,15 +438,18 @@
         if (Player.target == null) Player.target = -1;
         Player.target--;
         if (Player.target < 0) Player.target += enemies.length;
-        while (!enemies[Player.target]) { Player.target--; if (Player.target < 0) Player.target += enemies.length; }
+        var counter = 0;
+        while (!enemies[Player.target] && counter < enemies.length) { counter++; Player.target--; if (Player.target < 0) Player.target += enemies.length; }
       }
       if (currentlyPressedKeys[69]) { // "E"
         currentlyPressedKeys[69] = false;
         if (Player.target == null) Player.target = -1;
         Player.target++;
         Player.target = Player.target % enemies.length;
-        while (!enemies[Player.target] || enemies[Player.target].target != 1) { 
+        var counter = 0;
+        while (!enemies[Player.target] || enemies[Player.target].target != 1 && counter < enemies.length) { 
           Player.target++;
+          counter++;
           Player.target = Player.target % enemies.length;
         }
       }
