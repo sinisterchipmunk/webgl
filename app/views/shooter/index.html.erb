@@ -2,18 +2,19 @@
   <%content_for :global do%>
     /* Configuration stuff */
     var PLASMA_BLAST = {
-      range: 150,
+      range: 300,
       speed: 200,
-      proximity: 2,    // how far can it be from object's position to count as a hit? consider this a collision sphere radius.
+      proximity: 3,    // how far can it be from object's position to count as a hit? consider this a collision sphere radius.
       damage: 10,     // how much damage is inflicted per blast per hit?
       cooldown: 0.15,  // how many seconds cooldown between shots?
       offset: 2        // how far below the camera should the blast start?
     };
   
-    var ENEMY_STARTING_LIFE = PLASMA_BLAST.damage; /* how much life does an enemy start with? */
-    var ENEMY_SPAWN = [25,25,25];                  /* enemies will spawn in a random position between (-r/2, r/2) */
-    var ENEMY_PATIENCE = 5;                        /* how many seconds will an enemy hunt before seeking a new target? */
-    var ENEMY_TARGET_PLAYER_CHANCE = 0.1;          /* how likely is the computer to ignore closer targets and focus on player? */
+    var AI_ENABLED = true;                           /* for debug: when false, AI won't move, shoot or aim. */
+    var ENEMY_STARTING_LIFE = PLASMA_BLAST.damage*2; /* how much life does an enemy start with? */
+    var ENEMY_SPAWN = [25,25,25];                    /* enemies will spawn in a random position between (-r/2, r/2) */
+    var ENEMY_PATIENCE = 5;                          /* how many seconds will an enemy hunt before seeking a new target? */
+    var ENEMY_TARGET_PLAYER_CHANCE = 0.1;            /* how likely is the computer to ignore closer targets and focus on player? */
     var ENGINE_TRAIL_LENGTH = 0.35;
   
     var LOADING = true;
@@ -23,6 +24,22 @@
       max_distance: 10000,
       min_distance: 1000
     };
+  
+    var NAMES = [
+            'Alpha',
+            'Beta',
+            'Delta',
+            'Epsilon',
+            'Gamma',
+            'Mu',
+            'Nu',
+            'Zeta',
+            
+            'Red',
+            'Green',
+            'Blue',
+            'Yellow'
+    ];
     /* end config */
   
     /* global objects */
@@ -49,6 +66,8 @@
   
     // for keeping track of input
     var Player = {
+      target: null,
+      inversion: 1, // 1 or -1, depending on whether keyboard UP/DOWN are not inverted/inverted.
       cooldown: 0, // timer, see PLASMA_BLAST#cooldown
       max_movement: 75,
       max_rotation: Math.PI/4,
@@ -102,6 +121,7 @@
   
     var title; // SPACE BATTLE and GAME OVER
     var crosshair;
+    var targeting;
     var orthoCam; // for drawing overlays like the crosshair
     var texts = {};
     var plasmaBlasts = [];
@@ -109,6 +129,8 @@
     var lifeQuad; // the bar that represents the player's remaining life total
     var instructions;
     var loadingText; // "Loading, Please Wait..."
+    var targetingRay;
+    var targetingBracket; // the box that is placed around the player's current target
   
     var Enemy = Class.create(Renderable, {
       initialize: function($super) {
@@ -122,12 +144,15 @@
         this.maxSpeed = Player.max_movement;
         this.minSpeed = this.maxSpeed / 10.0;
         this.currentSpeed = Math.random() * (this.maxSpeed - this.minSpeed) + this.minSpeed;
+        this.setName();
       },
       draw: function(options) { if (Enemy.model) Enemy.model.render(options); },
       die: function() {
-        enemies[this.id] = null;
-        world.removeObject(this);
-        this.update = null;
+        if (Player.target && enemies[Player.target] && enemies[Player.target].id == this.id)
+          Player.target = null;
+//        enemies[this.id] = null;
+//        world.removeObject(this);
+//        this.update = null;
       },
       respawn: function() {
         var spawn0 = ENEMY_SPAWN[0];
@@ -136,10 +161,16 @@
         this.orientation.setPosition(Player.position[0] + (Math.random() * spawn0 - (spawn0 / 2.0)), 
                                      Player.position[1] + (Math.random() * spawn1 - (spawn1 / 2.0)),
                                      Player.position[2] + (Math.random() * spawn2 - (spawn2 / 2.0)));
+        this.orientation.setView(Math.random(), Math.random(), Math.random());
+        this.setName();
         this.target = null;
+        this.life = ENEMY_STARTING_LIFE;
+      },
+      setName: function() {
+        this.name = NAMES[Enemy.name_counter++ % NAMES.length];
       },
       update: function(tc) {
-        if (LOADING) return;
+        if (LOADING || !AI_ENABLED) return;
         var current = this.orientation.getView();
         if (!this.target || this.findNewTarget <= 0) {
           /* hunt a target - just choose the closest */
@@ -162,24 +193,32 @@
           
           /* minimum speed is the target's speed, give or take a little */
           if (this.target == 1) this.minSpeed = Player.movement[2] - 10.0;
-          else this.minSpeed = this.target.currentSpeed - 10.0;
+          else this.minSpeed = this.target.currentSpeed;// - 10.0;
         }
         this.findNewTarget -= tc;
                 
         /* TODO account for motion by leading the target! */
-        var target = (this.target == 1 ? Player.position : this.target.orientation.getPosition()).minus(this.orientation.getPosition()).normalize();
+        var isRealTarget = true; // if set to false, the AI knows not to shoot at its "target"
+        var target_position = (this.target == 1 ? Player.position : this.target.orientation.getPosition());
+        var target_direction = target_position.minus(this.orientation.getPosition()).normalize();
         var variance = Math.random();
+        var distanceFromTarget = target_position.minus(this.orientation.getPosition()).magnitude();
         // just pick a random direction some of the time. We could call this "evasive maneuvers" if
-        // we wanted to be creative...
-        if (variance < 0.05) target = current.plus([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]);
+        // we wanted to be creative... we'll also do this if we're too close to the target, because otherwise
+        // there's a chance of flying straight through the target. Not very realistic...
+        if (variance < 0.05 || distanceFromTarget < PLASMA_BLAST.proximity*2)
+        {
+          target_direction = current.plus([Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]);
+          isRealTarget = false;
+        } 
         var cross, parallel;
-        try { cross = current.cross(target); }
+        try { cross = current.cross(target_direction); }
         catch(e) { parallel = true; }
         
         if (!parallel) {
           /* need to turn by some amount around the [cross] axis */
           cross = cross.normalize();
-          var angle = target.angle(current);
+          var angle = target_direction.angle(current);
           var max = this.turnRadius * tc;
           if (angle > max) angle = max;
           else {
@@ -190,10 +229,11 @@
             this.orientation.setView(current.rotate(angle, cross));
         }
         
-        var distance = Player.position.minus(this.orientation.getPosition()).magnitude();
-        if (distance > PLASMA_BLAST.range - 10) /* we're too far, close in */
+//        var distance = Player.position.minus(this.orientation.getPosition()).magnitude();
+//        var distance = Player.position.minus(this.orientation.getPosition()).magnitude();
+        if (distanceFromTarget > PLASMA_BLAST.range - 10) /* we're too far, close in */
           this.currentSpeed += tc;
-        else if (distance < PLASMA_BLAST.range / 2) /* we're too close, back off */
+        else if (distanceFromTarget < PLASMA_BLAST.range / 2) /* we're too close, back off */
           this.currentSpeed -= tc;
         else if (this.currentSpeed != 0)
           this.currentSpeed += (this.currentSpeed / -this.currentSpeed) * tc; // we're just right, move towards 0 speed
@@ -203,7 +243,7 @@
         
         if (this.currentSpeed != 0) this.orientation.move(this.currentSpeed*tc);
         
-        if (parallel && distance <= PLASMA_BLAST.range) {
+        if (parallel && distanceFromTarget <= PLASMA_BLAST.range && isRealTarget) {
           /* we're lined up, may as well fire */
           if (this.cooldown > 0) {
             this.cooldown -= tc;
@@ -223,10 +263,12 @@
           var expl = particle_systems.create("explosion");
           expl.orientation.setPosition(this.orientation.getPosition());
           /* Remove this enemy */
+          this.die();
           this.respawn();
         }
       }
     });
+    Enemy.name_counter = 0;
     MD2.load("spaceship", function(obj) {
       Enemy.model = obj;
       Enemy.model.mesh.addTexture(Texture.instance("/images/textures/spaceship.png"));
@@ -367,8 +409,8 @@
         }
       }
       
-      if (currentlyPressedKeys[38]) Player.rotation[0] += rotation_speed; // arrow up
-      else if (currentlyPressedKeys[40]) Player.rotation[0] -= rotation_speed; // arrow down
+      if (currentlyPressedKeys[38]) Player.rotation[0] += rotation_speed * Player.inversion; // arrow up
+      else if (currentlyPressedKeys[40]) Player.rotation[0] -= rotation_speed * Player.inversion; // arrow down
       else {
         if (Player.rotation[0] != 0) {//} && !currentlyPressedKeys[38] && !currentlyPressedKeys[40]) {
           mag = Math.abs(Player.rotation[0]);
@@ -381,6 +423,40 @@
 //      if (currentlyPressedKeys[65]) Player.movement[0] -= 1; // A
 //      if (currentlyPressedKeys[68]) Player.movement[0] += 1; // D
       
+      if (currentlyPressedKeys[84]) { // "T"
+        /* we don't want to repeat this event. TODO find a better way. */
+        currentlyPressedKeys[84] = false;
+        if (Player.target == null) Player.target = -1;
+        Player.target++;
+        Player.target = Player.target % enemies.length;
+        while (!enemies[Player.target]) { Player.target++; Player.target = Player.target % enemies.length; }
+      }
+      if (currentlyPressedKeys[89]) { // "Y"
+        /* we don't want to repeat this event. TODO find a better way. */
+        currentlyPressedKeys[89] = false;
+        if (Player.target == null) Player.target = -1;
+        Player.target--;
+        if (Player.target < 0) Player.target += enemies.length;
+        while (!enemies[Player.target]) { Player.target--; if (Player.target < 0) Player.target += enemies.length; }
+      }
+      if (currentlyPressedKeys[69]) { // "E"
+        currentlyPressedKeys[69] = false;
+        if (Player.target == null) Player.target = -1;
+        Player.target++;
+        Player.target = Player.target % enemies.length;
+        while (!enemies[Player.target] || enemies[Player.target].target != 1) { 
+          Player.target++;
+          Player.target = Player.target % enemies.length;
+        }
+      }
+      if (currentlyPressedKeys[13]) { // "ENTER"
+        currentlyPressedKeys[13] = false;
+        if (Player.target != null && enemies[Player.target]) {
+          Player.movement[2] = enemies[Player.target].currentSpeed;
+        }
+      }
+
+
       if (Player.movement[0] > Player.max_movement) Player.movement[0] = Player.max_movement;
       if (Player.movement[0] <-Player.max_movement) Player.movement[0] =-Player.max_movement;
       if (Player.movement[2] > Player.max_movement) Player.movement[2] = Player.max_movement;
@@ -390,7 +466,6 @@
       if (Player.rotation[0] <-Player.max_rotation) Player.rotation[0] =-Player.max_rotation;
       if (Player.rotation[1] > Player.max_rotation) Player.rotation[1] = Player.max_rotation;
       if (Player.rotation[1] <-Player.max_rotation) Player.rotation[1] =-Player.max_rotation;
-      
     }
   
     var lastUpdate = null;
@@ -420,6 +495,30 @@
   <%end%>
   
   <%content_for :init do%>
+    targetingRay = new Line([0,0,0], [0,0,-100]);
+    targetingBracket = new Renderable({
+      init: function(verts, colors) {
+        this.draw_mode = GL_LINES;
+        var half = 0.5;
+        verts.push(-half, -half, 0);
+        verts.push(-half,  half, 0);
+        
+        verts.push(-half,  half, 0);
+        verts.push(-half+half/2.0, half, 0);
+
+        verts.push(-half,  -half, 0);
+        verts.push(-half+half/2.0, -half, 0);
+
+        verts.push( half, -half, 0);
+        verts.push( half,  half, 0);
+        
+        verts.push( half,  half, 0);
+        verts.push( half-half/2.0, half, 0);
+
+        verts.push( half,  -half, 0);
+        verts.push( half-half/2.0, -half, 0);
+      }
+    });
     context = new WebGLContext('main', <%=shaders.to_json%>);
   
     orthoCam = new Camera();
@@ -461,7 +560,7 @@
       }
     }});
     title.mesh.setColor(1,1,0,1);
-    instructions = new Text("W and S to speed up and slow down\nArrow keys to steer\nSpacebar to fire\nPress spacebar to begin!",
+    instructions = new Text("W and S to speed up and slow down\nArrow keys to steer\nSpacebar to fire\nPress T to cycle targets\n\nPress spacebar to begin!",
                             {type: "2d",x:-250,y:-100});
     instructions.mesh.setColor(1,1,0,1);
     loadingText = new Text("Loading, Please Wait...", {type:"2d",x:-300,y:-300});
@@ -474,11 +573,47 @@
     PlasmaBlast.model.mesh.addTexture(new Texture("/images/textures/particle.png"));
     PlasmaBlast.model.mesh.setColor([0,1,0.25,1]);
   
-    texts.speedTextZ = new Text("Velocity: 0",    {type:"2d",y:-580,update:function(tc) {
-      this.text = "Velocity: "+parseInt(Player.movement[2]);
+    texts.speedTextZ = new Text("Speed: 0",    {type:"2d",y:-580,update:function(tc) {
+      this.text = "Speed: "+parseInt(Player.movement[2]);
       this.refresh();
     }});
     texts.shields = new Text("Shields: ", {type:"2d", y:-580,x:-625});
+  
+    targeting = new Renderable({
+      init: function(vertices, colors) {
+        this.draw_mode = GL_LINES;
+        vertices.push(-150, 230, -1);
+        vertices.push(-150, 300, -1);
+
+        vertices.push( 150, 230, -1);
+        vertices.push( 150, 300, -1);
+
+        vertices.push(-150, 230, -1);
+        vertices.push( 150, 230, -1);
+      },
+    });
+    targeting.old_draw = targeting.draw;
+    targeting.draw = function(options) {
+      if (Player.target != null) {
+        if (this.target != Player.target || this.target_life != enemies[Player.target].life) {
+          // buffering Player.target allows us to avoid refreshing the info every frame
+          this.target = Player.target;
+          this.target_life = enemies[Player.target].life;
+          this.info = new Text("No Target", {type:"2d"});
+          this.info.text = "Target: "+enemies[Player.target].name+
+                           "\n\nShields: "+this.target_life;
+//                           "\nSpeed: "+parseInt(enemies[Player.target].currentSpeed)+
+//                           "\nDistance: "+parseInt(enemies[Player.target].orientation.getPosition().minus(world.camera.getPosition()).magnitude());
+          this.info.refresh();
+          this.info.orientation.moveTo(-(world.context.gl.viewportWidth - this.info.canvas.width) / 2.0, 0, 0);
+          //enemies[Player.target].draw({context:options.context});
+        }
+        
+        targeting.old_draw(options);
+        this.info.render({context:options.context});
+      }
+    };
+
   
     crosshair = new Renderable({
       init: function(vertices, colors) {
@@ -624,12 +759,43 @@
       }
   
       if (Player.control) {
+        world.context.disable(GL_DEPTH_TEST);
+        if (enemies[Player.target]) {
+          // don't forget the targetingBracket
+          var normal = enemies[Player.target].orientation.getPosition().minus(world.camera.getPosition()).normalize();
+          targetingBracket.orientation.setPosition(world.camera.getPosition().plus(normal.times(20)));
+          targetingBracket.orientation.lookAt(world.camera.getPosition());
+          targetingBracket.render({context:context});
+        }
+
         // crosshair and other overlay items
         orthoCam.look(context.gl);
-        world.context.disable(GL_DEPTH_TEST);
+
+        mvTranslate(0,0,-1);
+        if (enemies[Player.target]) {
+          var direction = enemies[Player.target].orientation.getPosition().dup();
+          direction[3] = 1;
+          // transform the world space vector into camera space (i.e. the player is the origin)
+          direction = world.camera.getMatrix().x($V(direction)).elements;
+          direction.pop(); // we don't need the 4th element
+          direction = direction.normalize();
+          
+          // if the target is behind the player, zero out the Z axis so that the vector stays long. Otherwise it'll
+          // point into the camera, resulting in a shorter ray, and confusing the player.
+          if (direction[2] > 0) direction[2] = 0;
+          direction[1] = -direction[1]; // not sure why this part is necessary
+          direction = direction.normalize();
+          targetingRay.orientation.lookAt(direction);
+          targetingRay.render({context:world.context});
+        }
+        mvTranslate(0,0,1);
+
         crosshair.render({context:world.context});
+        targeting.render({context:world.context});
         mvTranslate(-(Player.max_life - Player.life) / 2.0, 0, 0);
         lifeQuad.render({context:world.context});
+
+
         world.context.enable(GL_DEPTH_TEST);
       }
     }
@@ -650,6 +816,7 @@
 <p>Misses: <span id='misses'>0</span></p>
 <p>Kills: <span id='kills'>0</span></p>
 <p>Accuracy: <span id='accuracy'>100%</span></p>
+<p><input type="checkbox" onclick="Player.inversion = (this.checked ? -1 : 1);" /> Invert UP / DOWN</p>
 
 <div id="hiscores">
   <%=form_for @hiscore, :url => { :action => "create" }, :remote => true, :id => "hiscores" do |f|%>
@@ -663,6 +830,6 @@
       <%=f.label :name%><br/>
       <%=f.text_field :name, :onkeyup => "$('submit').disabled = false;"%>
     </p>
-    <input type="submit" id="submit" value="Submit" disabled />
+    <input type="submit" id="submit" value="Submit" disabled onclick="this.disabled = true;this.value = 'Please wait...';return true;" />
   <%end%>
 </div>

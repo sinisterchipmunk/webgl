@@ -3,7 +3,7 @@ class ShooterController < ApplicationController
   layout "engine_bare"
   
   def index
-    dependencies << "objects/cube" << "objects/md2"
+    dependencies << "objects/cube" << "objects/md2" << "objects/line"
     @hiscore = ShooterStats.new
   end
   
