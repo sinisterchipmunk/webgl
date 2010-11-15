@@ -339,7 +339,7 @@
         /* if a plasma blast is very close to an enemy, consider it a hit */
         var cur = this.orientation.getPosition();
         /* check player */
-        if (Player.control && Player.position.minus(cur).magnitude() <= PLASMA_BLAST.proximity) {
+        if (!this.playerOwned && Player.control && Player.position.minus(cur).magnitude() <= PLASMA_BLAST.proximity) {
           Player.takeDamage(PLASMA_BLAST.damage);
           this.die();
         }
@@ -382,11 +382,9 @@
     {
       var movement_speed = Player.max_movement; // in GL units per second
       var rotation_speed = Player.max_rotation / Player.inertia;
-      var strafing_speed = 1.0;
       
-      movement_speed *= tc; // we multiply by time passed. For any real world application we'd not rely on
-      rotation_speed *= tc; // setInterval and we'd calculate actual time elapsed instead.
-      strafing_speed *= tc;
+      movement_speed *= tc;
+      rotation_speed *= tc;
       
       
       if (currentlyPressedKeys[32] && !Player.control && Player.life > 0) {
