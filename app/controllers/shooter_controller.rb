@@ -14,6 +14,7 @@ class ShooterController < ApplicationController
     @scores = ShooterStats.find(:all, :order => "kills DESC, accuracy DESC, shots_fired ASC")
     respond_to do |fmt|
       fmt.js { render :action => "scores" }
+      fmt.html
     end
   end
   
