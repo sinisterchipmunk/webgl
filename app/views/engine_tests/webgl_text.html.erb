@@ -8,6 +8,9 @@
     /* Example of 2D text which tracks updates-per-second */
     var text2d = new Text("Hello, world! (2D)", {
       type: "2d",
+      x:-400,
+      y:-250,
+      align: {x:"left",y:"bottom"},
       update: function(tc) {
         this.frames = this.frames || 0;
         this.timer = this.timer || 0;

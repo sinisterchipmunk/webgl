@@ -58,6 +58,9 @@ var Text = Class.create(Renderable, {
       self.type         = options.type         || "2d";
       self.scale        = typeof(options.scale) == "number" ? options.scale : 1.0 / 400.0;
       self.enable_alpha = typeof(options.enable_alpha) == "undefined" ? false : options.enable_alpha;
+      self.align        = {};
+      self.align.x      = options.align && options.align.x || "center";
+      self.align.y      = options.align && options.align.y || "center";
       if (self.type != "3d" && self.type != "2d") throw new Error("Invalid type: "+self.type+"; expected one of '2d' or '3d'");
       
       self.left = options.left || options.x || 0;
@@ -91,7 +94,11 @@ var Text = Class.create(Renderable, {
       this.orientation.ortho(options.context.gl);
       
       pMatrix = this.orientation.getProjectionMatrix();
-      mvMatrix = this.orientation.getMatrix();
+      loadIdentity();
+      var pos = this.orientation.getPosition();
+      mvTranslate(pos[0], pos[1], pos[2]);
+      /* why doesn't this work?! actually it seems to invert X and Y. Strange. */
+//      mvMatrix = this.orientation.getMatrix();
     }
     else
     {
@@ -122,7 +129,9 @@ var Text = Class.create(Renderable, {
       }
       
       if (this.type == "2d") {
-        mvTranslate(this.quad.width/2.0,this.quad.height/2.0,-1);
+        var x = this.getHorizontalAlignment(), y = this.getVerticalAlignment();
+        mvTranslate(x,y,-1);
+//        mvTranslate(this.quad.width/2.0,this.quad.height/2.0,-1);
         options.context.disable(GL_DEPTH_TEST);
         this.mesh.render(options);
         options.context.enable(GL_DEPTH_TEST);
@@ -132,6 +141,24 @@ var Text = Class.create(Renderable, {
       
       if (this.enable_alpha)
         options.context.disable(GL_BLEND);
+    }
+  },
+  
+  getHorizontalAlignment: function() {
+    switch(this.align.x) {
+      case "left":            return  this.quad.width/2.0;
+      case "right":           return -this.quad.width/2.0;
+      case "center":          return 0;
+      default: throw new Error("Invalid horizontal alignment: "+this.align.x+" (expected 'left', 'right', 'center')");
+    }
+  },
+  
+  getVerticalAlignment: function() {
+    switch(this.align.y) {
+      case "bottom":           return  this.quad.height/2.0;
+      case "top":              return -this.quad.height/2.0;
+      case "center":           return 0;
+      default: throw new Error("Invalid vertical alignment: "+this.align.y+" (expected 'top', 'bottom', 'center')");
     }
   },
   

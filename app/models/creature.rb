@@ -1,6 +1,7 @@
 class Creature < ActiveRecord::Base
 #  serialize :orientation, WebGL::World::Camera
   belongs_to :actor
+  belongs_to :scene, :polymorphic => true
   delegate :view, :up, :right, :position, :view=, :up=, :position=, :right=, :to => :orientation
   
   def name

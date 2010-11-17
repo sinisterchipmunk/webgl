@@ -1,6 +1,10 @@
 class EngineTestsController < ApplicationController
   layout :choose_layout
   include WebGL
+
+  def mouse_weight
+    dependencies << "control/mouse_weight"
+  end
   
   def octree
     dependencies << "engine/heightmap" << "culling/octree" << "objects/sphere" << "objects/cube"

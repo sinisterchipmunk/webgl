@@ -1,0 +1,12 @@
+<script>
+<%content_for :global do%>
+  var mouselook;
+<%end%>
+
+<%content_for :init do%>
+  mouselook = new MouseWeight(world);
+  world.addObject(new Quad(1,1));
+  world.addObject(mouselook); // to render boundaries. Skip this if visual cues are unnecessary.
+  world.camera.move(-10);
+<%end%>
+</script>

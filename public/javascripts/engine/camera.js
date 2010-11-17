@@ -113,10 +113,10 @@ function Camera(options)
       options.right  = typeof(options.right)  != "undefined" ? options.right  :  1;
     }
     else {
-      options.left   = typeof(options.left)   != "undefined" ? options.left   : 0;
-      options.top    = typeof(options.top)    != "undefined" ? options.top    : gl.viewportHeight;
-      options.bottom = typeof(options.bottom) != "undefined" ? options.bottom : 0;
-      options.right  = typeof(options.right)  != "undefined" ? options.right  : gl.viewportWidth;
+      options.left   = typeof(options.left)   != "undefined" ? options.left   : -(gl.viewportWidth/2.0);
+      options.top    = typeof(options.top)    != "undefined" ? options.top    :   gl.viewportHeight/2.0;
+      options.bottom = typeof(options.bottom) != "undefined" ? options.bottom : -(gl.viewportHeight/2.0);
+      options.right  = typeof(options.right)  != "undefined" ? options.right  :   gl.viewportWidth/2.0;
     }
     options.near = options.near || 0.1;
     options.far  = options.far  || 200;

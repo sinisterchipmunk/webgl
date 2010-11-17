@@ -20,7 +20,11 @@ var WebGLContext = function() {
     {
       this.id = ++WebGLContext.identifier;
       this.canvas = $(element_or_name);
+      this.callbacks = { mouse: { moved: [], dragged:[], pressed:[], released:[], over:[], out:[], clicked:[] }};
       if (!this.canvas) throw new Error("Could not find canvas '"+element_or_name+"'");
+
+      this.registerMouseListeners();
+
       try {
         this.gl = this.canvas.getContext("experimental-webgl");
         this.gl.context = this;
@@ -52,6 +56,15 @@ var WebGLContext = function() {
       this.startRendering(render_func);
     },
     
+    /* Adds the function to the list of callbacks to fire whenever the mouse is moved. */
+    onMouseMove:   function(func) { this.callbacks.mouse.moved.push(func); },
+    onMouseDrag:   function(func) { this.callbacks.mouse.dragged.push(func); },
+    onMousePress:  function(func) { this.callbacks.mouse.pressed.push(func); },
+    onMouseRelease:function(func) { this.callbacks.mouse.released.push(func); },
+    onMouseIn:     function(func) { this.callbacks.mouse.over.push(func); },
+    onMouseOut:    function(func) { this.callbacks.mouse.out.push(func); },
+    onMouseClick:  function(func) { this.callbacks.mouse.clicked.push(func); },
+    
     buildShader: function(name) {
       var shader = new Shader();
       shader.context = this;
@@ -80,6 +93,86 @@ var WebGLContext = function() {
     },
 
     isRendering: function() { return this.renderInterval != null; },
+    
+    registerMouseListeners: function() {
+      var self = this;
+      Event.observe(this.canvas, "mousemove", function(event) {
+        event = event || {};
+        event.source = this;
+        mouse.overCanvas = mouse.canvas = mouse.target = self.canvas;
+        mouse.context = self;
+        mouse.offsetx = mouse.x;
+        mouse.offsety = mouse.y;
+        mouse.x = event.clientX - self.canvas.cumulativeOffset()[0];
+        mouse.y = event.clientY - self.canvas.cumulativeOffset()[1];
+        // add scroll offsets
+        if (window.pageXOffset)
+        {
+          mouse.x += window.pageXOffset;
+          mouse.y += window.pageYOffset;
+        }
+        else
+        {
+          mouse.x += document.body.scrollLeft;
+          mouse.y += document.body.scrollTop;
+        }
+        if (mouse.offsetx)
+          mouse.diffx = mouse.x - mouse.offsetx;
+        if (mouse.offsety)
+          mouse.diffy = mouse.y - mouse.offsety;
+        
+        if (mouse.down == null)
+          for (var i = 0; i < self.callbacks.mouse.moved.length; i++)
+            self.callbacks.mouse.moved[i](event);
+        else
+          for (var i = 0; i < self.callbacks.mouse.dragged.length; i++)
+            self.callbacks.mouse.dragged[i](event);
+      });
+      
+      Event.observe(this.canvas, "mouseover", function(event) {
+        event = event || {};
+        event.source = this;
+        for (var i = 0; i < self.callbacks.mouse.over.length; i++)
+          self.callbacks.mouse.over[i](event);
+      });
+      
+      Event.observe(this.canvas, "mouseout", function(event) {
+        event = event || {};
+        event.source = this;
+        for (var i = 0; i < self.callbacks.mouse.out.length; i++)
+          self.callbacks.mouse.out[i](event);
+      });
+      
+      Event.observe(this.canvas, "click", function(event) {
+        event = event || {};
+        event.source = this;
+        for (var i = 0; i < self.callbacks.mouse.clicked.length; i++)
+          self.callbacks.mouse.clicked[i](event);
+      });
+      
+      Event.observe(this.canvas, "mousedown", function(event) {
+        event = event || {};
+        event.source = this;
+        var button = event.which;
+        
+        mouse.down = mouse.down || {count:0,down:{}};
+        button = mouse.down["button"+button] = {at:[mouse.x,mouse.y]};
+
+        for (var i = 0; i < self.callbacks.mouse.pressed.length; i++)
+          self.callbacks.mouse.pressed[i](event);
+      });
+      
+      Event.observe(this.canvas, "mouseup", function(event) {
+        event = event || {};
+        event.source = this;
+        mouse.down.count--;
+        if (mouse.down.count <= 0)
+          mouse.down = null;
+
+        for (var i = 0; i < self.callbacks.mouse.released.length; i++)
+          self.callbacks.mouse.released[i](event);
+      });
+    },
     
     /* Sets the render interval. If already rendering, the current one will be cleared and a new one will be set.
        Takes an optional render_func parameter, which will be called as part of the render process. If omitted and

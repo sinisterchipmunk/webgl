@@ -4,6 +4,8 @@ class ShooterController < ApplicationController
   
   def index
     dependencies << "objects/cube" << "objects/md2" << "objects/line"
+    dependencies << "control/mouse_weight"
+
     @hiscore = ShooterStats.new
   end
   

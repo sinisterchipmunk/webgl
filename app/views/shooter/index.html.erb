@@ -119,6 +119,7 @@
       }
     };
   
+    var mouselook;
     var title; // SPACE BATTLE and GAME OVER
     var crosshair;
     var targeting;
@@ -389,12 +390,13 @@
       
       if (currentlyPressedKeys[32] && !Player.control && Player.life > 0) {
         /* starting a new game! */
+        mouselook.suspended = false;
         Player.control = true;
         STATS.update();
         return;
       }
       
-      if (!Player.control) return;
+      if (!Player.control) { mouselook.suspended = true; return; }
 
       var mag;
       if (currentlyPressedKeys[32] && Player.cooldown <= 0) Player.fire();
@@ -494,6 +496,12 @@
         if (plasmaBlasts[i])
           plasmaBlasts[i].update(tc);
     }
+  
+    function updateInversion() {
+      Player.inversion = ($("invert").checked ? -1 : 1);
+      if (Player.inversion == -1) mouselook.invert = true;
+      else mouselook.invert = false;
+    }
   <%end%>
   
   <%content_for :init do%>
@@ -525,7 +533,7 @@
   
     orthoCam = new Camera();
     var w = context.gl.viewportWidth / 2.0, h = context.gl.viewportHeight / 2.0;
-    orthoCam.ortho(context.gl, {left:-w,right:w,top:-h,bottom:h});
+    orthoCam.ortho(context.gl);
   
     /* TODO make this stuff not necessary */
     gl = context.gl;
@@ -533,6 +541,12 @@
     world.camera.perspective(context.gl, {far:20000});
     context.world.context = context;
     world.camera.moveTo(0,0,10);
+
+
+    mouselook = new MouseWeight(world);
+    mouselook.speed = Player.max_rotation;
+    world.addObject(mouselook);
+
   
     world.particle_systems.add(new ParticleSystem({
       particle_count: 100,
@@ -558,40 +572,41 @@
     title = new Text("SPACE\nBATTLE", {type:"3d", size:120,update: function(tc) {
       if (!Player.control && Player.life <= 0 && this.text != "GAME\nOVER") {
         this.text = "GAME\nOVER";
+        mouselook.suspended = true;
         this.refresh();
       }
     }});
     title.mesh.setColor(1,1,0,1);
     instructions = new Text("W and S to speed up and slow down\nArrow keys to steer\nSpacebar to fire\nPress T to cycle targets\n\nPress spacebar to begin!",
-                            {type: "2d",x:-250,y:-100});
+                            {type: "2d",x:0,y:-150});
     instructions.mesh.setColor(1,1,0,1);
-    loadingText = new Text("Loading, Please Wait...", {type:"2d",x:-300,y:-300});
+    loadingText = new Text("Loading, Please Wait...", {type:"2d",x:0,y:0});
     loadingText.mesh.setColor(1,1,0,1);
     
     lifeQuad = new Quad(100, 20);
     lifeQuad.mesh.setColor(0,0,1,1);
-    lifeQuad.orientation.moveTo(350, -290, -1);
+    lifeQuad.orientation.moveTo(350, 290, -1);
     
     PlasmaBlast.model.mesh.addTexture(new Texture("/images/textures/particle.png"));
     PlasmaBlast.model.mesh.setColor([0,1,0.25,1]);
   
-    texts.speedTextZ = new Text("Speed: 0",    {type:"2d",y:-580,update:function(tc) {
+    texts.speedTextZ = new Text("Speed: 0",    {type:"2d",y:300,x:-400,align:{x:"left",y:'top'},update:function(tc) {
       this.text = "Speed: "+parseInt(Player.movement[2]);
       this.refresh();
     }});
-    texts.shields = new Text("Shields: ", {type:"2d", y:-580,x:-625});
+    texts.shields = new Text("Shields: ", {type:"2d",align:{x:"right",y:"top"}, y:300,x:300});
   
     targeting = new Renderable({
       init: function(vertices, colors) {
         this.draw_mode = GL_LINES;
-        vertices.push(-150, 230, -1);
-        vertices.push(-150, 300, -1);
+        vertices.push(-150, -230, -1);
+        vertices.push(-150, -300, -1);
 
-        vertices.push( 150, 230, -1);
-        vertices.push( 150, 300, -1);
+        vertices.push( 150, -230, -1);
+        vertices.push( 150, -300, -1);
 
-        vertices.push(-150, 230, -1);
-        vertices.push( 150, 230, -1);
+        vertices.push(-150, -230, -1);
+        vertices.push( 150, -230, -1);
       },
     });
     targeting.old_draw = targeting.draw;
@@ -601,13 +616,13 @@
           // buffering Player.target allows us to avoid refreshing the info every frame
           this.target = Player.target;
           this.target_life = enemies[Player.target].life;
-          this.info = new Text("No Target", {type:"2d"});
+          this.info = new Text("No Target", {type:"2d",align:{y:"top"},y:-230});
           this.info.text = "Target: "+enemies[Player.target].name+
                            "\n\nShields: "+this.target_life;
 //                           "\nSpeed: "+parseInt(enemies[Player.target].currentSpeed)+
 //                           "\nDistance: "+parseInt(enemies[Player.target].orientation.getPosition().minus(world.camera.getPosition()).magnitude());
           this.info.refresh();
-          this.info.orientation.moveTo(-(world.context.gl.viewportWidth - this.info.canvas.width) / 2.0, 0, 0);
+//          this.info.orientation.moveTo(-(world.context.gl.viewportWidth - this.info.canvas.width) / 2.0, 0, 0);
           //enemies[Player.target].draw({context:options.context});
         }
         
@@ -724,6 +739,7 @@
     }));
   
     Player.control = false;
+    updateInversion();
   <%end%>
         
   <%content_for :render do%>
@@ -747,14 +763,12 @@
           plasmaBlasts[i].render({context:world.context});
 
       if (!Player.control) {
-//      orthoCam.look(context.gl, {unit:true});
         loadIdentity();
         world.context.disable(GL_DEPTH_TEST);
         mvTranslate(0,0,-1);
         mvRotate(-60, 1, 0, 0);
         title.draw({context:world.context,shader:title.getDefaultShader()});
   
-        orthoCam.look(context.gl);
         if (Player.life > 0)
           instructions.render({context:context});
         world.context.enable(GL_DEPTH_TEST);
@@ -785,7 +799,6 @@
           // if the target is behind the player, zero out the Z axis so that the vector stays long. Otherwise it'll
           // point into the camera, resulting in a shorter ray, and confusing the player.
           if (direction[2] > 0) direction[2] = 0;
-          direction[1] = -direction[1]; // not sure why this part is necessary
           direction = direction.normalize();
           targetingRay.orientation.lookAt(direction);
           targetingRay.render({context:world.context});
@@ -818,7 +831,7 @@
 <p>Misses: <span id='misses'>0</span></p>
 <p>Kills: <span id='kills'>0</span></p>
 <p>Accuracy: <span id='accuracy'>100%</span></p>
-<p><input type="checkbox" onclick="Player.inversion = (this.checked ? -1 : 1);" /> Invert UP / DOWN</p>
+<p><input type="checkbox" id="invert" onclick="updateInversion();" /> Invert UP / DOWN</p>
 
 <div id="hiscores">
   <%=form_for @hiscore, :url => { :action => "create" }, :remote => true, :id => "hiscores" do |f|%>

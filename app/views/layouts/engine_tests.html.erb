@@ -64,12 +64,19 @@
         
         var canvas = document.getElementById("canvas");
         
-        canvas.onclick = canvas_clicked;
-        canvas.onmousemove = mouse_moved;
-        canvas.onmouseover = mouse_over;
-        canvas.onmouseout  = mouse_out;
-        canvas.onmousedown = mouse_down;
-        canvas.onmouseup   = mouse_up;
+        context.onMouseClick(canvas_clicked);
+        context.onMouseMove(mouse_moved);
+        context.onMouseIn(mouse_over);
+        context.onMouseOut(mouse_out);
+        context.onMousePress(mouse_down);
+        context.onMouseRelease(mouse_up);
+        context.onMouseDrag(mouse_dragged);
+//        canvas.onclick = canvas_clicked;
+//        canvas.onmousemove = mouse_moved;
+//        canvas.onmouseover = mouse_over;
+//        canvas.onmouseout  = mouse_out;
+//        canvas.onmousedown = mouse_down;
+//        canvas.onmouseup   = mouse_up;
         
         initializationComplete();
         context.checkError();
@@ -94,35 +101,14 @@
     function mouse_moved(event) {
       var self = this;
       logger.attempt("mouse_moved", function() {
-        // FIXME doesn't account for scroll offsets
-        mouse.overCanvas = true;
-        mouse.offsetx = mouse.x;
-        mouse.offsety = mouse.y;
-        mouse.x = event.clientX - $(self).cumulativeOffset()[0]-1;
-        mouse.y = event.clientY - $(self).cumulativeOffset()[1]-1;
-        // add scroll offsets
-        if (window.pageXOffset)
-        {
-          mouse.x += window.pageXOffset;
-          mouse.y += window.pageYOffset;
-        }
-        else
-        { 
-          mouse.x += document.body.scrollLeft;
-          mouse.y += document.body.scrollTop;
-        }
-        if (mouse.offsetx)
-          mouse.diffx = mouse.x - mouse.offsetx;
-        if (mouse.offsety)
-          mouse.diffy = mouse.y - mouse.offsety;
-  
-        if (mouse.down == null) {
-          <%=yield :mouse_moved%>
-        }
-        else
-        {
-          <%=yield :mouse_dragged%>
-        }
+        <%=yield :mouse_moved%>
+      });
+    }
+          
+    function mouse_dragged(event) {
+      var self = this;
+      logger.attempt("mouse_moved", function() {
+        <%=yield :mouse_dragged%>
       });
     }
           
@@ -140,24 +126,12 @@
           
     function mouse_down(event) {
       logger.attempt("mouse_down", function() {
-        var button = event.which;
-        
-        mouse.down = mouse.down || {count:0,down:{}};
-        button = mouse.down["button"+button] = {at:[mouse.x,mouse.y]};
-        
         <%=yield :mouse_pressed%>
       });
     }
           
     function mouse_up(event) {
       logger.attempt("mouse_up", function() {
-        if (mouse.down)
-        {
-          mouse.down.count--;
-          if (mouse.down.count <= 0)
-            mouse.down = null;
-        }
-      
         <%=yield :mouse_released%>
       });
     }
