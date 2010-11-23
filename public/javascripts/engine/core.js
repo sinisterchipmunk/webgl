@@ -14,16 +14,6 @@ Date.ext={};Date.ext.util={};Date.ext.util.xPad=function(x,pad,r){if(typeof (r)=
 // String#capitalize
 String.prototype.capitalize = function() { return this.substring(0,1).toUpperCase()+this.substring(1,this.length); };
 // Math#pow2 - find the nearest power of 2 for given number
-//Math.pow2 = function(n) { return Math.pow(2, Math.round(Math.log(n) / Math.log(2))); };
-//Math.pow2 = function(n) {
-//  var m = n;
-//  for(var i = 0; m > 1; i++) {
-//    m = m >>> 1;
-//  }
-//  // Round to nearest power
-//  if (n & 1 << i-1) { i++; }
-//  return 1 << i;
-//};
 Math.pow2 = function(k) {
   if (k == 0)
     return 1;
@@ -37,7 +27,11 @@ Math.pow2 = function(k) {
 function instanceFor(klass, attributes)
 {
   klass.instances = klass.instances || [];
-  klass.instances[attributes.id] = klass.instances[attributes.id] || new klass(attributes);
+  if (attributes)
+    klass.instances[attributes.id] = klass.instances[attributes.id] || new klass(attributes);
+  else
+    return null;
+
   return klass.instances[attributes.id];
 }
 

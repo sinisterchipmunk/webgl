@@ -32,6 +32,7 @@
 <%end%>
   
 <%content_for :init do%>
+  context.disable(GL_BLEND);
   for (var x = -10; x <= 10; x += 2)
     for (var y = -2; y <= 2; y += 2)
       for (var z = -10; z <= 10; z += 2)

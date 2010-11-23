@@ -19,7 +19,7 @@ var Axis = Class.create(Renderable, {
       var view = pos.plus(this.camera.getView().times(this.scale)),
                  right = pos.plus(this.camera.getRight().times(this.scale)),
                  up = pos.plus(this.camera.getUp().times(this.scale));
-      var offset = this.offset || [0,0,0];
+      var offset = (this.offset = this.offset || [0,0,0]);
       
       var vertices = this.mesh.getVertexBuffer();
       for (var i = 0; i < 3; i++)

@@ -125,7 +125,7 @@
   }
   else
   {
-    var ray = world.unproject(mouse.x, world.context.gl.viewportHeight - mouse.y);
+    var ray = world.unproject(mouse.x, mouse.y);
     _debug_ray.set(ray[0], ray[1]);
                  
     // line-segment/triangle collision detection

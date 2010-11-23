@@ -8,5 +8,16 @@
   world.addObject(new Quad(1,1));
   world.addObject(mouselook); // to render boundaries. Skip this if visual cues are unnecessary.
   world.camera.move(-10);
+  
+  var inversion = false;
+  setInterval(function() { 
+    if (currentlyPressedKeys[89]) { inversion = !inversion; currentlyPressedKeys[89] = false; }
+    $("inversion").update(inversion);
+    mouselook.invert = inversion;
+  }, 15);
 <%end%>
 </script>
+
+<p>Press Y to Invert Y Axis</p>
+
+<p>Inverted: <span id="inversion"></span></p>

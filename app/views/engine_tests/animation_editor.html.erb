@@ -91,7 +91,6 @@
               if (!pickShaders[id][context.id]) pickShaders[id][context.id] = new Renderable.PickShader(context, id).shader;
               
               var i = skeleton.all[id].index;
-//              logger.info(skeleton.snapshot[i*3]+" "+skeleton.snapshot[i*3+1]+" "+skeleton.snapshot[i*3+2]);
               sphere.orientation.setPosition(skeleton.snapshot[i*3], skeleton.snapshot[i*3+1], skeleton.snapshot[i*3+2]);
               if (mode == RENDER_PICK)
                 options.shader = pickShaders[id][context.id];
@@ -101,34 +100,10 @@
                 else options.shader = null;
               sphere.object_id = id;
               
-//              options.shader = sphere.shader;
               sphere.render(options);
             }
           }
         };
-//        spheres.render = function(options) {
-//          if (skeleton.snapshot)
-//          {
-//            for (var id in skeleton.all) 
-//            {
-//              if (id == "length") continue;
-//              if (!pickShaders[id]) pickShaders[id] = {};
-//              if (!pickShaders[id][options.context.id])
-//                pickShaders[id][options.context.id] = new Renderable.PickShader(options.context, id).shader;
-//              
-//              var i = skeleton.all[id].index;
-//              sphere.orientation.setPosition(skeleton.snapshot[i*3], skeleton.snapshot[i*3+1], skeleton.snapshot[i*3+2]);
-//              if (options.mode == RENDER_PICK)
-//                sphere.shader = pickShaders[id][options.context.id];
-//              else
-//                if (selected_bone == id) sphere.shader = 'test_red';
-//                else if (highlighted_bone == id) sphere.shader = 'test_orange';
-//                else sphere.shader = null;
-//              sphere.object_id = id;
-//              sphere.render(options);
-//            }
-//          }
-//        };
         front.world.addObject(skeleton);
         topContext.world.addObject(skeleton);
         left.world.addObject(skeleton);
@@ -205,9 +180,9 @@
         highlighted_bone = mouse.context.world.pickIndex(mouse.x, mouse.y);
         
         var mode = $('dragModeTranslate').checked ? 'translate' : 'rotate';
-        var axisX, axisY, neg = -1;
+        var axisX, axisY, neg = 1;
 
-        if (self.id == 'canvas-top') { axisX = 0; axisY = 2; neg = 1; }
+        if (self.id == 'canvas-top') { axisX = 0; axisY = 2; neg = -1; }
         if (self.id == "canvas-left"){ axisX = 2; axisY = 1; }
         if (self.id == "canvas-front"){axisX = 0; axisY = 1; }
 
@@ -230,7 +205,7 @@
               if (self.id == "canvas-left"){ axisY = 0; }
               if (self.id == "canvas-front"){axisY = 2; }
 
-              var rotation = (-mouse.diffy + mouse.diffx) / 300;
+              var rotation = (mouse.diffy + mouse.diffx) / 300;
               var rotations = skeleton.keyframes[currentKeyframe].rotations;
               var rotationIndex = skeleton.all[selected_bone].index * 3;
               rotations[rotationIndex+axisY] += rotation;

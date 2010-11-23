@@ -51,6 +51,8 @@ var WebGLContext = function() {
       this.gl.clearDepth(1.0);
       this.gl.enable(this.gl.DEPTH_TEST);
       this.gl.depthFunc(this.gl.LEQUAL);
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
       this.checkError();
       
       this.startRendering(render_func);
@@ -105,6 +107,7 @@ var WebGLContext = function() {
         mouse.offsety = mouse.y;
         mouse.x = event.clientX - self.canvas.cumulativeOffset()[0];
         mouse.y = event.clientY - self.canvas.cumulativeOffset()[1];
+		    mouse.y = self.gl.viewportHeight - mouse.y;
         // add scroll offsets
         if (window.pageXOffset)
         {

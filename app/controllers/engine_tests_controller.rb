@@ -46,7 +46,7 @@ class EngineTestsController < ApplicationController
     # add one of each Creature to the world.
     Creature.all.each_with_index do |creature, index|
       creature.scale = 0.25
-      creature.position = [(index+1)*10,0,(index+1) *10]
+      creature.orientation.position = [(index+1)*10,0,(index+1) *10]
       world << creature
     end
   end
@@ -130,8 +130,8 @@ class EngineTestsController < ApplicationController
     ogro2.orientation.position = [ 1.5,0,0] # different positions depending on the controller action. Yay for flexibility :)
     ogro2.orientation.view = [0,0,1];
     ogro2.orientation.up   = [0,1,0];
-    ogro1.scale = 0.05 # ditto the above
-    ogro2.scale = 0.05
+    ogro1.actor.model.scale = 0.05 # ditto the above
+    ogro2.actor.model.scale = 0.05
     
     @creatures = [ ogro1, ogro2 ]
     

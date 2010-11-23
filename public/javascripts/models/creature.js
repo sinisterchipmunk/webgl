@@ -16,7 +16,7 @@ var Creature = (function() {
       this.id = attributes.id;
       this.name = attributes.name;
       this.actor = Actor.instance(attributes.actor);
-      this.scale = this.actor.scale = attributes.scale;
+      // this.scale = this.actor.scale;//attributes.scale || this.actor.scale;
       this.playAnimation("stand");
       this.movement = new MovementDescriptor();
       
@@ -43,7 +43,13 @@ var Creature = (function() {
       {
         /* clone actor's mesh data for animation purposes - this way we don't affect the root actor when animating */
         this.actor.model.mesh.init(vertices, colors, texcoords, normals);
+		this.scale = this.actor.model.scale;
       }
+    },
+    
+    render: function($super, options) {
+      if (!this.actor.meshLoaded) return;
+      $super(options);
     },
     
     update: function(timechange)

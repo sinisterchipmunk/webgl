@@ -118,7 +118,6 @@ World.prototype = {
     y -= 1;
     
     var self = this;
-    y = self.context.gl.viewportHeight - y;
     //render for picking
     self.context.bindFramebuffer(GL_FRAMEBUFFER, this.framePickBuffer);
     self.context.viewport(0,0,self.context.gl.viewportWidth,self.context.gl.viewportHeight);

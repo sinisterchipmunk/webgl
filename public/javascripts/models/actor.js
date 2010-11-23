@@ -3,12 +3,12 @@ var Actor = Class.create(Renderable, {
     var self = this;
     self.id = attributes.id;
     self.name = attributes.name;
-    self.scale = attributes.scale || 1;
+    // self.scale = attributes.scale || (attributes.model && attributes.model.scale) || 1;
     self.ai = AI.instance(attributes.ai);
     
     MD2.load(attributes.model.name, function(obj) {
       self.model = obj;
-      self.model.setScale(self.scale);
+      self.model.setScale(attributes.model && attributes.model.scale || 1);
       
       for (var i = 0; i < attributes.model.textures.length; i++)
         self.model.mesh.addTexture(attributes.model.textures[i].path);

@@ -73,7 +73,6 @@ var MouseWeight = Class.create(Renderable, {
     var x = this.x, y = this.y;
     var gl = this.world.context.gl;
     
-    y = gl.viewportHeight - y;
     x -= gl.viewportWidth / 2.0;
     y -= gl.viewportHeight / 2.0;
     
@@ -85,7 +84,7 @@ var MouseWeight = Class.create(Renderable, {
     var nx1 = normal[0] * this.radius, nx2 = normal[0] * this.sensitivity;
     var ny1 = normal[1] * this.radius, ny2 = normal[1] * this.sensitivity;
     
-    // check values against extremes
+    // clamp values to extremes
     if (nx1 > 0 && x > nx1) x = nx1;
     if (nx1 < 0 && x < nx1) x = nx1;
     if (ny1 > 0 && y > ny1) y = ny1;
@@ -95,8 +94,8 @@ var MouseWeight = Class.create(Renderable, {
     if (ny2 > 0 && y < ny2) y = 0;
     if (ny2 < 0 && y > ny2) y = 0;
     
-    if ((x == 0 || mouse.x - gl.viewportWidth / 2.0 == x) &&
-        (y == 0 || (gl.viewportHeight - mouse.y) - gl.viewportHeight / 2.0 == y))
+    if ((x == 0 || mouse.x - gl.viewportWidth  / 2.0 == x) &&
+        (y == 0 || mouse.y - gl.viewportHeight / 2.0 == y))
       this.world.context.canvas.style.cursor = 'none';
     else
       this.world.context.canvas.style.cursor = this.cursor.out_of_bounds;

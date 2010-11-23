@@ -88,7 +88,7 @@ var Text = Class.create(Renderable, {
     this.draw_mode = this.quad.draw_mode;
   },
   
-  applyMatrices: function(options) {
+  applyMatrices: function($super, options) {
     if (this.type == "2d")
     {
       this.orientation.ortho(options.context.gl);
@@ -102,9 +102,10 @@ var Text = Class.create(Renderable, {
     }
     else
     {
-      mvMatrix = mvMatrix.x(this.orientation.getMatrix());
+		$super(options);
+      // mvMatrix = mvMatrix.x(this.orientation.getMatrix());
     }
-  } ,
+  },
   
   draw: function($super, options) {
     if (this.mesh)

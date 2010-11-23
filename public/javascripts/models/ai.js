@@ -1,9 +1,11 @@
 var AI = Class.create({
   initialize: function(attributes) {
     var ai = this;
-    ai.id = attributes.id;
-    ai.name = attributes.name;
-    ai.base_id = attributes.base_id;
+	if (attributes) {
+	    ai.id = attributes.id;
+	    ai.name = attributes.name;
+	    ai.base_id = attributes.base_id;
+	}
     
     /* TODO: add these to the record attributes */
     ai.speed = 15;

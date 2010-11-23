@@ -127,6 +127,7 @@ function Camera(options)
   
   self.perspective = function(gl, options)
   {
+	if (gl.gl) gl = gl.gl;
     if (!options) options = {};
     
     options.fov  = options.fov  || 45;
@@ -203,7 +204,7 @@ Camera.prototype.lookAt = function(vec, y, z) {
 // at the FAR plane relative to the camera's current matrices.
 // Code adapted from gluUnproject(), found at http://www.opengl.org/wiki/GluProject_and_gluUnProject_code
 Camera.prototype.unproject = function(context, winx, winy, winz) {
-  if (typeof(winx) != "number" || typeof(winy) != "number") { throw new Error("one or both of X / Y is missing"); }
+  if (typeof(winx) != "number" || typeof(winy) != "number") { throw new Error("one or both of Context / X / Y is missing"); }
 
   // winz is either 0 (near plane), 1 (far plane) or somewhere in between.
   // if it's not given a value we'll produce coords for both.
