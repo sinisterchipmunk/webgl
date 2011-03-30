@@ -1,0 +1,10 @@
+= important
+
+This project contains the source files for my original WebGL demos and preliminary tests. I still come back to it as a reference point, because a lot of the code I wrote back then is still perfectly helpful now.
+
+However, I've now begun on a full-fledged WebGL development framework that I'm tentatively calling {Jax}[http://github.com/sinisterchipmunk/jax]. Going forward, my efforts will be spent almost entirely on Jax, so I probably won't be updating this repository much. At some point I may even rework it to take advantage of Jax.
+
+{Jax}[http://github.com/sinisterchipmunk/jax] is a featureful, Ruby-powered, Rails-like framework designed to rapidly spit out beautiful WebGL applications. Jax is designed to work with Rails out-of-the-box, but of course Rails is not a requirement to use Jax.
+
+If you're interested in developing WebGL-enabled applications, either with or without Rails, you should hop on over to http://github.com/sinisterchipmunk/jax and see what it can do for you.
+
